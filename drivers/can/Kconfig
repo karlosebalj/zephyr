@@ -49,19 +49,47 @@ config CAN_SHELL_RX_QUEUE_SIZE
 
 endif # CAN_SHELL
 
+config CAN_HAS_CANFD
+	bool
+	help
+	  driver supports CAN-FD
+
+config CAN_HAS_RX_TIMESTAMP
+	bool
+	help
+	  driver supports RX timestamps
+
+config CAN_FD_MODE
+	bool "CAN-FD"
+	default y
+	depends on CAN_HAS_CANFD
+	help
+	  Enable CAN-FD compatible API
+if CAN_FD_MODE
+config CANFD_MAX_DLC
+	int "Max data length code in CAN frames"
+	range 8 15
+	default 15
+	help
+	  Maximum allowed DLC in a CAN frame. This parameter sets the
+	  data buffer size in a CAN frame and is therefore only used to
+	  optimize memory consumption.
+endif # CAN_FD_MODE
+
 config CAN_STATS
 	bool "CAN controller device statistics"
 	depends on STATS
 	help
 	  Enable CAN controller device statistics.
 
-config CAN_FD_MODE
-	bool "CAN-FD"
-	help
-	  Enable CAN-FD support. Not all CAN controllers support CAN-FD.
+# config CAN_FD_MODE
+# 	bool "CAN-FD"
+# 	help
+# 	  Enable CAN-FD support. Not all CAN controllers support CAN-FD.
 
 config CAN_RX_TIMESTAMP
 	bool "Receiving timestamps"
+	depends on CAN_HAS_RX_TIMESTAMP
 	help
 	  This option enables a timestamp value of the CAN free running timer.
 	  The value is incremented every bit time and starts when the controller
@@ -101,6 +129,7 @@ source "drivers/can/Kconfig.esp32"
 source "drivers/can/Kconfig.kvaser"
 source "drivers/can/Kconfig.fake"
 source "drivers/can/Kconfig.nxp_s32"
+source "drivers/can/Kconfig.mcp25xxfd"
 
 source "drivers/can/transceiver/Kconfig"
 
