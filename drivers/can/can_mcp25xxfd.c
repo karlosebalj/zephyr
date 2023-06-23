@@ -6,13 +6,13 @@
 
 #define DT_DRV_COMPAT microchip_mcp25xxfd
 
-#include <kernel.h>
-#include <device.h>
-#include <drivers/spi.h>
-#include <drivers/gpio.h>
+#include <zephyr/kernel.h>
+#include <zephyr/device.h>
+#include <zephyr/drivers/spi.h>
+#include <zephyr/drivers/gpio.h>
 
 #define LOG_LEVEL CONFIG_CAN_LOG_LEVEL
-#include <logging/log.h>
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(mcp25xxfd_can);
 
 #include "can_mcp25xxfd.h"

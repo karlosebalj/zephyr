@@ -7,7 +7,7 @@
 #ifndef ZEPHYR_DRIVERS_CAN_MICROCHIP_MCP25XXFD_H_
 #define ZEPHYR_DRIVERS_CAN_MICROCHIP_MCP25XXFD_H_
 
-#include <drivers/can.h>
+#include <zephyr/drivers/can.h>
 
 #define DEV_CFG(dev) ((const struct mcp25xxfd_config *const)(dev)->config)
 #define DEV_DATA(dev) ((struct mcp25xxfd_data *const)(dev)->data)
