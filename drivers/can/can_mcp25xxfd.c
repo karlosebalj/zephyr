@@ -442,50 +442,50 @@ static int mcp25xxfd_send(const struct device *dev,
 		(frame->flags & CAN_FRAME_FDF) != 0U ? "FD frame" : "",
 		(frame->flags & CAN_FRAME_BRS) != 0U ? "BRS" : "");
 
-	// if (frame->fd != 1 && frame->dlc > CAN_MAX_DLC) {
-	// 	LOG_ERR("DLC of %d without fd flag set.", frame->dlc);
-	// 	return CAN_TX_EINVAL;
-	// }
+	if ((frame->flags & CAN_FRAME_FDF) == 0 && frame->dlc > CAN_MAX_DLC) {
+		LOG_ERR("DLC of %d without fd flag set.", frame->dlc);
+		return -EINVAL; //
+	}
 
-	// if (k_sem_take(&dev_data->tx_sem, timeout) != 0) {
-	// 	return -EAGAIN;
-	// }
+	if (k_sem_take(&dev_data->tx_sem, timeout) != 0) {
+		return -EAGAIN;
+	}
 
-	// k_mutex_lock(&dev_data->mutex, K_FOREVER);
-	// for (; mailbox_idx < MCP25XXFD_TXFIFOS; mailbox_idx++) {
-	// 	if ((BIT(mailbox_idx) & dev_data->mailbox_usage) == 0) {
-	// 		dev_data->mailbox_usage |= BIT(mailbox_idx);
-	// 		break;
-	// 	}
-	// }
-	// k_mutex_unlock(&dev_data->mutex);
+	k_mutex_lock(&dev_data->mutex, K_FOREVER);
+	for (; mailbox_idx < MCP25XXFD_TXFIFOS; mailbox_idx++) {
+		if ((BIT(mailbox_idx) & dev_data->mailbox_usage) == 0) {
+			dev_data->mailbox_usage |= BIT(mailbox_idx);
+			break;
+		}
+	}
+	k_mutex_unlock(&dev_data->mutex);
 
-	// if (mailbox_idx >= MCP25XXFD_TXFIFOS) {
-	// 	k_sem_give(&dev_data->tx_sem);
-	// 	return CAN_TX_ERR;
-	// }
+	if (mailbox_idx >= MCP25XXFD_TXFIFOS) {
+		k_sem_give(&dev_data->tx_sem);
+		return -EIO;
+	}
 
-	// dev_data->mailbox[mailbox_idx].cb = callback;
-	// dev_data->mailbox[mailbox_idx].cb_arg = callback_arg;
+	dev_data->mailbox[mailbox_idx].cb = callback;
+	dev_data->mailbox[mailbox_idx].cb_arg = callback_arg;
 
-	// mcp25xxfd_canframe_to_txobj(frame, &tx_frame);
-	// tx_frame.SEQ = mailbox_idx;
-	// ret = mcp25xxfd_fifo_write(dev, MCP25XXFD_REG_FIFOCON(mailbox_idx), &tx_frame,
-	// 			   offsetof(struct mcp25xxfd_txobj, DATA) + ROUND_UP(can_dlc_to_bytes(frame->dlc), 4));
+	mcp25xxfd_canframe_to_txobj(frame, &tx_frame);
+	tx_frame.SEQ = mailbox_idx;
+	ret = mcp25xxfd_fifo_write(dev, MCP25XXFD_REG_FIFOCON(mailbox_idx), &tx_frame,
+				   offsetof(struct mcp25xxfd_txobj, DATA) + ROUND_UP(can_dlc_to_bytes(frame->dlc), 4));
 
-	// if (ret >= 0) {
-	// 	if (callback == NULL) {
-	// 		k_sem_take(&dev_data->mailbox[mailbox_idx].tx_sem,
-	// 			   timeout);
-	// 	}
-	// } else {
-	// 	k_mutex_lock(&dev_data->mutex, K_FOREVER);
-	// 	dev_data->mailbox_usage &= ~BIT(mailbox_idx);
-	// 	k_mutex_unlock(&dev_data->mutex);
-	// 	k_sem_give(&dev_data->tx_sem);
-	// }
+	if (ret >= 0) {
+		if (callback == NULL) {
+			k_sem_take(&dev_data->mailbox[mailbox_idx].tx_sem,
+				   timeout);
+		}
+	} else {
+		k_mutex_lock(&dev_data->mutex, K_FOREVER);
+		dev_data->mailbox_usage &= ~BIT(mailbox_idx);
+		k_mutex_unlock(&dev_data->mutex);
+		k_sem_give(&dev_data->tx_sem);
+	}
 
-	// return ret;
+	return ret;
 }
 
 // static int mcp25xxfd_attach_isr(const struct device *dev,
