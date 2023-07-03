@@ -71,7 +71,7 @@ struct mcp25xxfd_data {
 
 	/* Filter Data */
 	uint64_t filter_usage;
-	// struct zcan_filter filter[CONFIG_CAN_MAX_FILTER];
+	struct can_filter filter[CONFIG_CAN_MAX_FILTER];
 	can_rx_callback_t rx_cb[CONFIG_CAN_MAX_FILTER];
 	void *cb_arg[CONFIG_CAN_MAX_FILTER];
 };

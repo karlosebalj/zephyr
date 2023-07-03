@@ -156,85 +156,89 @@ done:
 	return ret;
 }
 
-// static int mcp25xxfd_fifo_write(const struct device *dev, uint16_t fifo_address,
-// 				void *txd, uint8_t tx_len)
-// {
-// 	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
-// 	union mcp25xxfd_fifo fiforegs;
-// 	int ret;
+static int mcp25xxfd_fifo_write(const struct device *dev, uint16_t fifo_address,
+				void *txd, uint8_t tx_len)
+{
+	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
+	union mcp25xxfd_fifo fiforegs;
+	int ret;
 
-// 	k_mutex_lock(&dev_data->mutex, K_FOREVER);
+	k_mutex_lock(&dev_data->mutex, K_FOREVER);
 
-// 	ret = mcp25xxfd_read(dev, fifo_address, &fiforegs, sizeof(fiforegs));
-// 	if (ret < 0) {
-// 		goto done;
-// 	}
+	ret = mcp25xxfd_read(dev, fifo_address, &fiforegs, sizeof(fiforegs));
+	if (ret < 0) {
+		goto done;
+	}
 
-// 	if (!fiforegs.sta.FNEIF) {
-// 		ret = -ENOMEM;
-// 		goto done;
-// 	}
+	if (!fiforegs.sta.FNEIF) {
+		ret = -ENOMEM;
+		goto done;
+	}
 
-// 	ret = mcp25xxfd_write(dev, 0x400 + fiforegs.ua, txd, tx_len);
-// 	if (ret < 0) {
-// 		goto done;
-// 	}
+	ret = mcp25xxfd_write(dev, 0x400 + fiforegs.ua, txd, tx_len);
+	if (ret < 0) {
+		goto done;
+	}
 
-// 	fiforegs.con.UINC = 1;
-// 	fiforegs.con.TXREQ = 1;
-// 	ret = mcp25xxfd_writeb(dev, fifo_address + 1, &fiforegs.con.bytes[1]);
+	fiforegs.con.UINC = 1;
+	fiforegs.con.TXREQ = 1;
+	ret = mcp25xxfd_writeb(dev, fifo_address + 1, &fiforegs.con.bytes[1]);
 
-// done:
-// 	k_mutex_unlock(&dev_data->mutex);
-// 	return ret;
-// }
+done:
+	k_mutex_unlock(&dev_data->mutex);
+	return ret;
+}
 
-// static void mcp25xxfd_zcanframe_to_txobj(const struct zcan_frame *src,
-// 					   struct mcp25xxfd_txobj *dst)
-// {
-// 	memset(dst, 0, offsetof(struct mcp25xxfd_txobj, DATA));
+// TODO: Check this function for flags
+static void mcp25xxfd_canframe_to_txobj(const struct can_frame *src,
+					   struct mcp25xxfd_txobj *dst)
+{
+	memset(dst, 0, offsetof(struct mcp25xxfd_txobj, DATA)); // TODO: maybe size of??
 
-// 	if (src->id_type == CAN_STANDARD_IDENTIFIER) {
-// 		dst->SID = src->id;
-// 	} else {
-// 		dst->SID = src->id >> 18;
-// 		dst->EID = src->id;
-// 		dst->IDE = 1;
-// 	}
-// 	dst->BRS = src->brs;
-// 	dst->RTR = src->rtr == CAN_REMOTEREQUEST;
-// 	dst->DLC = src->dlc;
-// #if defined(CONFIG_CAN_FD_MODE)
-// 	dst->FDF = src->fd;
-// #endif
+	if ((src->flags & CAN_FRAME_IDE) == 0) {
+		dst->SID = src->id;
+	} else {
+		dst->SID = src->id >> 18;
+		dst->EID = src->id;
+		dst->IDE = 1;
+	}
+	dst->BRS = (src->flags & CAN_FRAME_BRS) != 0;
+    dst->RTR = (src->flags & CAN_FRAME_RTR) != 0;
+    dst->DLC = src->dlc;
+#if defined(CONFIG_CAN_FD_MODE)
+    dst->FDF = (src->flags & CAN_FRAME_FDF) != 0;
+#endif
 
-// 	memcpy(dst->DATA, src->data, MIN(can_dlc_to_bytes(src->dlc), CAN_MAX_DLEN));
-// }
+	memcpy(dst->DATA, src->data, MIN(can_dlc_to_bytes(src->dlc), CAN_MAX_DLEN));
+}
 
-// static void mcp25xxfd_rxobj_to_zcanframe(const struct mcp25xxfd_rxobj *src,
-// 					 struct zcan_frame *dst)
-// {
-// 	memset(dst, 0, offsetof(struct zcan_frame, data));
+// TODO: Check this function for flags also
+static void mcp25xxfd_rxobj_to_canframe(const struct mcp25xxfd_rxobj *src,
+					 struct can_frame *dst)
+{
+	memset(dst, 0, offsetof(struct can_frame, data)); // TODO: Maybe use sizeof
 
-// 	if (src->IDE) {
-// 		dst->id = src->EID | (src->SID << 18);
-// 		dst->id_type = CAN_EXTENDED_IDENTIFIER;
-// 	} else {
-// 		dst->id = src->SID;
-// 		dst->id_type = CAN_STANDARD_IDENTIFIER;
-// 	}
-// 	dst->brs = src->BRS;
-// 	dst->rtr = src->RTR;
-// 	dst->dlc = src->DLC;
-// #if defined(CONFIG_CAN_FD_MODE)
-// 	dst->fd = src->FDF;
-// #endif
-// #if defined(CONFIG_CAN_RX_TIMESTAMP)
-// 	dst->timestamp = src->RXMSGTS;
-// #endif
+	if (src->IDE) {
+		dst->id = src->EID | (src->SID << 18);
+        dst->flags |= CAN_FRAME_IDE;
+	} else {
+		dst->id = src->SID;
+		dst->flags = 0;  // No need to set any flags for standard identifiers
+		// dst->id_type = CAN_STANDARD_IDENTIFIER; // TODO: Check this
+	}
+	dst->flags |= src->BRS ? CAN_FRAME_BRS : 0;  // Set Bit Rate Switch flag
+    dst->flags |= src->RTR ? CAN_FRAME_RTR : 0;  // Set Remote Transmission Request flag
+    dst->dlc = src->DLC;
 
-// 	memcpy(dst->data, src->DATA, MIN(can_dlc_to_bytes(src->DLC), CAN_MAX_DLEN));
-// }
+#if defined(CONFIG_CAN_FD_MODE)
+    dst->flags |= src->FDF ? CAN_FRAME_FDF : 0;  // Set FD Frame flag
+#endif
+#if defined(CONFIG_CAN_RX_TIMESTAMP)
+    dst->timestamp = src->RXMSGTS;
+#endif
+
+	memcpy(dst->data, src->DATA, MIN(can_dlc_to_bytes(src->DLC), CAN_MAX_DLEN));
+}
 
 static int mcp25xxfd_get_raw_mode(const struct device *dev, uint8_t *mode)
 {
@@ -422,68 +426,68 @@ done:
 	return ret;
 }
 
-// static int mcp25xxfd_send(const struct device *dev,
-// 			  const struct zcan_frame *msg, k_timeout_t timeout,
-// 			  can_tx_callback_t callback, void *callback_arg)
-// {
-// 	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
-// 	struct mcp25xxfd_txobj tx_frame;
-// 	uint8_t mailbox_idx = 0;
-// 	int ret;
+static int mcp25xxfd_send(const struct device *dev,
+			  const struct can_frame *msg, k_timeout_t timeout,
+			  can_tx_callback_t callback, void *callback_arg)
+{
+	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
+	struct mcp25xxfd_txobj tx_frame;
+	uint8_t mailbox_idx = 0;
+	int ret;
 
-// 	LOG_DBG("Sending %d bytes. Id: 0x%x, ID type: %s %s %s %s",
-// 		can_dlc_to_bytes(msg->dlc), msg->id,
-// 		msg->id_type == CAN_STANDARD_IDENTIFIER ?
-// 		"standard" : "extended",
-// 		msg->rtr == CAN_DATAFRAME ? "" : "RTR",
-// 		msg->fd == CAN_DATAFRAME ? "" : "FD frame",
-// 		msg->brs == CAN_DATAFRAME ? "" : "BRS");
+	// LOG_DBG("Sending %d bytes. Id: 0x%x, ID type: %s %s %s %s",
+	// 	can_dlc_to_bytes(msg->dlc), msg->id,
+	// 	msg->id_type == CAN_STANDARD_IDENTIFIER ?
+	// 	"standard" : "extended",
+	// 	msg->rtr == CAN_DATAFRAME ? "" : "RTR",
+	// 	msg->fd == CAN_DATAFRAME ? "" : "FD frame",
+	// 	msg->brs == CAN_DATAFRAME ? "" : "BRS");
 
-// 	if (msg->fd != 1 && msg->dlc > CAN_MAX_DLC) {
-// 		LOG_ERR("DLC of %d without fd flag set.", msg->dlc);
-// 		return CAN_TX_EINVAL;
-// 	}
+	// if (msg->fd != 1 && msg->dlc > CAN_MAX_DLC) {
+	// 	LOG_ERR("DLC of %d without fd flag set.", msg->dlc);
+	// 	return CAN_TX_EINVAL;
+	// }
 
-// 	if (k_sem_take(&dev_data->tx_sem, timeout) != 0) {
-// 		return -EAGAIN;
-// 	}
+	// if (k_sem_take(&dev_data->tx_sem, timeout) != 0) {
+	// 	return -EAGAIN;
+	// }
 
-// 	k_mutex_lock(&dev_data->mutex, K_FOREVER);
-// 	for (; mailbox_idx < MCP25XXFD_TXFIFOS; mailbox_idx++) {
-// 		if ((BIT(mailbox_idx) & dev_data->mailbox_usage) == 0) {
-// 			dev_data->mailbox_usage |= BIT(mailbox_idx);
-// 			break;
-// 		}
-// 	}
-// 	k_mutex_unlock(&dev_data->mutex);
+	// k_mutex_lock(&dev_data->mutex, K_FOREVER);
+	// for (; mailbox_idx < MCP25XXFD_TXFIFOS; mailbox_idx++) {
+	// 	if ((BIT(mailbox_idx) & dev_data->mailbox_usage) == 0) {
+	// 		dev_data->mailbox_usage |= BIT(mailbox_idx);
+	// 		break;
+	// 	}
+	// }
+	// k_mutex_unlock(&dev_data->mutex);
 
-// 	if (mailbox_idx >= MCP25XXFD_TXFIFOS) {
-// 		k_sem_give(&dev_data->tx_sem);
-// 		return CAN_TX_ERR;
-// 	}
+	// if (mailbox_idx >= MCP25XXFD_TXFIFOS) {
+	// 	k_sem_give(&dev_data->tx_sem);
+	// 	return CAN_TX_ERR;
+	// }
 
-// 	dev_data->mailbox[mailbox_idx].cb = callback;
-// 	dev_data->mailbox[mailbox_idx].cb_arg = callback_arg;
+	// dev_data->mailbox[mailbox_idx].cb = callback;
+	// dev_data->mailbox[mailbox_idx].cb_arg = callback_arg;
 
-// 	mcp25xxfd_zcanframe_to_txobj(msg, &tx_frame);
-// 	tx_frame.SEQ = mailbox_idx;
-// 	ret = mcp25xxfd_fifo_write(dev, MCP25XXFD_REG_FIFOCON(mailbox_idx), &tx_frame,
-// 				   offsetof(struct mcp25xxfd_txobj, DATA) + ROUND_UP(can_dlc_to_bytes(msg->dlc), 4));
+	// mcp25xxfd_canframe_to_txobj(msg, &tx_frame);
+	// tx_frame.SEQ = mailbox_idx;
+	// ret = mcp25xxfd_fifo_write(dev, MCP25XXFD_REG_FIFOCON(mailbox_idx), &tx_frame,
+	// 			   offsetof(struct mcp25xxfd_txobj, DATA) + ROUND_UP(can_dlc_to_bytes(msg->dlc), 4));
 
-// 	if (ret >= 0) {
-// 		if (callback == NULL) {
-// 			k_sem_take(&dev_data->mailbox[mailbox_idx].tx_sem,
-// 				   timeout);
-// 		}
-// 	} else {
-// 		k_mutex_lock(&dev_data->mutex, K_FOREVER);
-// 		dev_data->mailbox_usage &= ~BIT(mailbox_idx);
-// 		k_mutex_unlock(&dev_data->mutex);
-// 		k_sem_give(&dev_data->tx_sem);
-// 	}
+	// if (ret >= 0) {
+	// 	if (callback == NULL) {
+	// 		k_sem_take(&dev_data->mailbox[mailbox_idx].tx_sem,
+	// 			   timeout);
+	// 	}
+	// } else {
+	// 	k_mutex_lock(&dev_data->mutex, K_FOREVER);
+	// 	dev_data->mailbox_usage &= ~BIT(mailbox_idx);
+	// 	k_mutex_unlock(&dev_data->mutex);
+	// 	k_sem_give(&dev_data->tx_sem);
+	// }
 
-// 	return ret;
-// }
+	// return ret;
+}
 
 // static int mcp25xxfd_attach_isr(const struct device *dev,
 // 				can_rx_callback_t rx_cb, void *cb_arg,
@@ -603,7 +607,7 @@ done:
 
 // 	while (mcp25xxfd_fifo_read(dev, MCP25XXFD_REG_FIFOCON(fifo_idx), &rx_frame,
 // 				   sizeof(rx_frame)) >= 0) {
-// 		mcp25xxfd_rxobj_to_zcanframe(&rx_frame, &msg);
+// 		mcp25xxfd_rxobj_to_canframe(&rx_frame, &msg);
 // 		if (dev_data->filter_usage & BIT(rx_frame.FILHIT)) {
 // 			dev_data->rx_cb[rx_frame.FILHIT](
 // 				&msg, dev_data->cb_arg[rx_frame.FILHIT]);
