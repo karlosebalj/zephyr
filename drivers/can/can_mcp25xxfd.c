@@ -427,7 +427,7 @@ done:
 }
 
 static int mcp25xxfd_send(const struct device *dev,
-			  const struct can_frame *msg, k_timeout_t timeout,
+			  const struct can_frame *frame, k_timeout_t timeout,
 			  can_tx_callback_t callback, void *callback_arg)
 {
 	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
@@ -435,16 +435,15 @@ static int mcp25xxfd_send(const struct device *dev,
 	uint8_t mailbox_idx = 0;
 	int ret;
 
-	// LOG_DBG("Sending %d bytes. Id: 0x%x, ID type: %s %s %s %s",
-	// 	can_dlc_to_bytes(msg->dlc), msg->id,
-	// 	msg->id_type == CAN_STANDARD_IDENTIFIER ?
-	// 	"standard" : "extended",
-	// 	msg->rtr == CAN_DATAFRAME ? "" : "RTR",
-	// 	msg->fd == CAN_DATAFRAME ? "" : "FD frame",
-	// 	msg->brs == CAN_DATAFRAME ? "" : "BRS");
+	LOG_DBG("Sending %d bytes. Id: 0x%x, ID type: %s %s %s %s",
+		can_dlc_to_bytes(frame->dlc), frame->id,
+		(frame->flags & CAN_FRAME_IDE) != 0U ? "extended" : "standard",
+		(frame->flags & CAN_FRAME_RTR) != 0U ? "RTR" : "",
+		(frame->flags & CAN_FRAME_FDF) != 0U ? "FD frame" : "",
+		(frame->flags & CAN_FRAME_BRS) != 0U ? "BRS" : "");
 
-	// if (msg->fd != 1 && msg->dlc > CAN_MAX_DLC) {
-	// 	LOG_ERR("DLC of %d without fd flag set.", msg->dlc);
+	// if (frame->fd != 1 && frame->dlc > CAN_MAX_DLC) {
+	// 	LOG_ERR("DLC of %d without fd flag set.", frame->dlc);
 	// 	return CAN_TX_EINVAL;
 	// }
 
@@ -469,10 +468,10 @@ static int mcp25xxfd_send(const struct device *dev,
 	// dev_data->mailbox[mailbox_idx].cb = callback;
 	// dev_data->mailbox[mailbox_idx].cb_arg = callback_arg;
 
-	// mcp25xxfd_canframe_to_txobj(msg, &tx_frame);
+	// mcp25xxfd_canframe_to_txobj(frame, &tx_frame);
 	// tx_frame.SEQ = mailbox_idx;
 	// ret = mcp25xxfd_fifo_write(dev, MCP25XXFD_REG_FIFOCON(mailbox_idx), &tx_frame,
-	// 			   offsetof(struct mcp25xxfd_txobj, DATA) + ROUND_UP(can_dlc_to_bytes(msg->dlc), 4));
+	// 			   offsetof(struct mcp25xxfd_txobj, DATA) + ROUND_UP(can_dlc_to_bytes(frame->dlc), 4));
 
 	// if (ret >= 0) {
 	// 	if (callback == NULL) {
@@ -603,14 +602,14 @@ static int mcp25xxfd_send(const struct device *dev,
 // {
 // 	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
 // 	struct mcp25xxfd_rxobj rx_frame;
-// 	struct zcan_frame msg;
+// 	struct zcan_frame frame;
 
 // 	while (mcp25xxfd_fifo_read(dev, MCP25XXFD_REG_FIFOCON(fifo_idx), &rx_frame,
 // 				   sizeof(rx_frame)) >= 0) {
-// 		mcp25xxfd_rxobj_to_canframe(&rx_frame, &msg);
+// 		mcp25xxfd_rxobj_to_canframe(&rx_frame, &frame);
 // 		if (dev_data->filter_usage & BIT(rx_frame.FILHIT)) {
 // 			dev_data->rx_cb[rx_frame.FILHIT](
-// 				&msg, dev_data->cb_arg[rx_frame.FILHIT]);
+// 				&frame, dev_data->cb_arg[rx_frame.FILHIT]);
 // 		}
 // 	}
 // }
