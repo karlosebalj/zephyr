@@ -6,8 +6,8 @@
 
 #include <zephyr/kernel.h>
 
-static const struct device *fpreader = DEVICE_DT_GET(DT_NODELABEL(fpreader));
-static const struct device *lock = DEVICE_DT_GET(DT_NODELABEL(lock));
+// static const struct device *fpreader = DEVICE_DT_GET(DT_NODELABEL(fpreader));
+// static const struct device *lock = DEVICE_DT_GET(DT_NODELABEL(lock));
 
 int main(void)
 {

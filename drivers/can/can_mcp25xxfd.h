@@ -60,7 +60,7 @@ struct mcp25xxfd_data {
 
 	/* General */
 	enum can_state state;
-	can_state_change_isr_t state_change_isr;
+	// can_state_change_isr_t state_change_isr;
 	struct k_mutex mutex;
 	struct k_sem mode_sem;
 
@@ -71,7 +71,7 @@ struct mcp25xxfd_data {
 
 	/* Filter Data */
 	uint64_t filter_usage;
-	struct zcan_filter filter[CONFIG_CAN_MAX_FILTER];
+	// struct zcan_filter filter[CONFIG_CAN_MAX_FILTER];
 	can_rx_callback_t rx_cb[CONFIG_CAN_MAX_FILTER];
 	void *cb_arg[CONFIG_CAN_MAX_FILTER];
 };
