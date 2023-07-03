@@ -11,9 +11,15 @@
 #include <zephyr/drivers/spi.h>
 #include <zephyr/drivers/gpio.h>
 
-#define LOG_LEVEL CONFIG_CAN_LOG_LEVEL
+#include <zephyr/drivers/can/transceiver.h>
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(mcp25xxfd_can);
+
+// #define LOG_LEVEL CONFIG_CAN_LOG_LEVEL
+
+LOG_MODULE_REGISTER(can_mcp25xxfd, CONFIG_CAN_LOG_LEVEL);
+
+// #include <zephyr/logging/log.h>
+// LOG_MODULE_REGISTER(mcp25xxfd_can);
 
 #include "can_mcp25xxfd.h"
 

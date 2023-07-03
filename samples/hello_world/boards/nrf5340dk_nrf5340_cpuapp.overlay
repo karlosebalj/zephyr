@@ -1,0 +1,104 @@
+/*
+ * Copyright (c) 2021 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
+
+&spi4 {
+	compatible = "nordic,nrf-spim";
+	status = "okay";
+    cs-gpios = <&gpio1 12 GPIO_ACTIVE_LOW>; /* D10 */
+
+    // can0: mcp25xxfd@0 {
+    //     // compatible = "microchip,mcp25xxfd";
+    //     spi-max-frequency = <16000000>;
+    //     // int-gpios = <&gpio0 5 GPIO_ACTIVE_LOW>;
+    //     int-gpios = <&gpio1 4 GPIO_ACTIVE_LOW>; /* D2 */
+    //     status = "okay";
+    //     label = "CAN_0";
+    //     reg = <0>;
+    //     osc-freq = <40000000>;
+    //     sof-on-clko;
+    //     bus-speed = <1000000>;
+    //     bus-speed-data = <8000000>;
+    //     sjw = <5>;
+    //     prop-seg = <18>;
+    //     phase-seg1 = <10>;
+    //     phase-seg2 = <11>;
+    //     sjw-data = <1>;
+    //     prop-seg-data = <0>;
+    //     phase-seg1-data = <3>;
+    //     phase-seg2-data = <1>;
+
+    //     #address-cells = <1>;
+    //     #size-cells = <0>;
+    // };
+
+    // can0: mcp2518fd@0 {
+    //     compatible = "microchip,mcp25xxfd";
+    //     spi-max-frequency = <16000000>;
+    //     int-gpios = <&gpio1 4 GPIO_ACTIVE_LOW>; /* D2 */
+    //     status = "okay";
+    //     label = "CAN_0";
+    //     reg = <0>;
+    //     osc-freq = <40000000>;
+    //     sof-on-clko;
+    //     bus-speed = <1000000>;
+    //     bus-speed-data = <8000000>;
+    //     sjw = <5>;
+    //     prop-seg = <18>;
+    //     phase-seg1 = <10>;
+    //     phase-seg2 = <11>;
+    //     sjw-data = <1>;
+    //     prop-seg-data = <0>;
+    //     phase-seg1-data = <3>;
+    //     phase-seg2-data = <1>;
+
+    //     #address-cells = <1>;
+    //     #size-cells = <0>;
+    // };
+};
+
+/ {
+    chosen {
+        // zephyr,can-primary = &can0;
+        zephyr,canbus = &mcp2518;
+        zephyr,spi4 = &spi4;
+        zephyr,shell-uart = &uart0;
+        zephyr,console = &uart0;
+    };
+};
+
+spi_can: &spi4 {
+    compatible = "nordic,nrf-spim";
+};
+
+&spi_can {
+    status = "okay";
+    // cs-gpios = <&gpio1 12 GPIO_ACTIVE_LOW>; /* D10 */
+    cs-gpios = <&arduino_header 16 GPIO_ACTIVE_LOW>; /* D10 */
+
+    mcp2518: can@0 {
+        compatible = "microchip,mcp25xxfd";
+        spi-max-frequency = <16000000>;
+        int-gpios = <&gpio1 4 GPIO_ACTIVE_LOW>; /* D2 */
+        status = "okay";
+        label = "CAN_0";
+        reg = <0>;
+        osc-freq = <40000000>;
+        sof-on-clko;
+        bus-speed = <1000000>;
+        bus-speed-data = <8000000>;
+        sjw = <5>;
+        prop-seg = <18>;
+        phase-seg1 = <10>;
+        phase-seg2 = <11>;
+        sjw-data = <1>;
+        prop-seg-data = <0>;
+        phase-seg1-data = <3>;
+        phase-seg2-data = <1>;
+
+        #address-cells = <1>;
+        #size-cells = <0>;
+    };
+};
