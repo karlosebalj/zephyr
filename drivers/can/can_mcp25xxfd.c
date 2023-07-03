@@ -30,6 +30,7 @@ LOG_MODULE_REGISTER(can_mcp25xxfd, CONFIG_CAN_LOG_LEVEL);
  */
 #define USE_SP_ALGO (DT_INST_FOREACH_STATUS_OKAY(SP_IS_SET) 0)
 
+
 static int mcp25xxfd_reset(const struct device *dev)
 {
 	uint8_t cmd_buf[] = { 0x00, 0x00 };
@@ -235,74 +236,74 @@ done:
 // 	memcpy(dst->data, src->DATA, MIN(can_dlc_to_bytes(src->DLC), CAN_MAX_DLEN));
 // }
 
-// static int mcp25xxfd_get_raw_mode(const struct device *dev, uint8_t *mode)
-// {
-// 	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
-// 	union mcp25xxfd_con con;
-// 	int ret;
+static int mcp25xxfd_get_raw_mode(const struct device *dev, uint8_t *mode)
+{
+	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
+	union mcp25xxfd_con con;
+	int ret;
 
-// 	k_mutex_lock(&dev_data->mutex, K_FOREVER);
-// 	ret = mcp25xxfd_readb(dev, MCP25XXFD_REG_CON + 2, &con.byte[2]);
-// 	k_mutex_unlock(&dev_data->mutex);
-// 	*mode = con.OPMOD;
-// 	return ret;
-// }
+	k_mutex_lock(&dev_data->mutex, K_FOREVER);
+	ret = mcp25xxfd_readb(dev, MCP25XXFD_REG_CON + 2, &con.byte[2]);
+	k_mutex_unlock(&dev_data->mutex);
+	*mode = con.OPMOD;
+	return ret;
+}
 
-// static int mcp25xxfd_set_raw_mode(const struct device *dev, uint8_t mode)
-// {
-// 	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
-// 	union mcp25xxfd_con con;
-// 	int ret;
+static int mcp25xxfd_set_raw_mode(const struct device *dev, uint8_t mode)
+{
+	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
+	union mcp25xxfd_con con;
+	int ret;
 
-// 	while (true) {
-// 		k_mutex_lock(&dev_data->mutex, K_FOREVER);
-// 		ret = mcp25xxfd_readw(dev, MCP25XXFD_REG_CON, &con);
-// 		if (ret < 0 || con.OPMOD == mode) {
-// 			k_mutex_unlock(&dev_data->mutex);
-// 			break;
-// 		}
+	while (true) {
+		k_mutex_lock(&dev_data->mutex, K_FOREVER);
+		ret = mcp25xxfd_readw(dev, MCP25XXFD_REG_CON, &con);
+		if (ret < 0 || con.OPMOD == mode) {
+			k_mutex_unlock(&dev_data->mutex);
+			break;
+		}
 
-// 		if (con.OPMOD == MCP25XXFD_OPMODE_CONFIGURATION) {
-// 			/* Configuration mode can be switched to any other mode */
-// 			con.REQMOD = mode;
-// 		} else if (con.OPMOD == MCP25XXFD_OPMODE_NORMAL_CANFD ||
-// 			   con.OPMOD == MCP25XXFD_OPMODE_NORMAL_CAN2) {
-// 			/* Normal modes can only be directly switched to Sleep, Restricted, or Listen-Only modes */
-// 			if (mode == MCP25XXFD_OPMODE_SLEEP ||
-// 			    mode == MCP25XXFD_OPMODE_RESTRICTED ||
-// 			    mode == MCP25XXFD_OPMODE_LISTEN_ONLY) {
-// 				con.REQMOD = mode;
-// 			} else {
-// 				con.REQMOD = MCP25XXFD_OPMODE_CONFIGURATION;
-// 			}
-// 		} else if (con.OPMOD == MCP25XXFD_OPMODE_LISTEN_ONLY) {
-// 			/* Listen-Only mode can be directly switched back to normal modes */
-// 			if (mode == MCP25XXFD_OPMODE_NORMAL_CANFD ||
-// 			    mode == MCP25XXFD_OPMODE_NORMAL_CAN2) {
-// 				con.REQMOD = mode;
-// 			} else {
-// 				con.REQMOD = MCP25XXFD_OPMODE_CONFIGURATION;
-// 			}
-// 		} else {
-// 			/* Otherwise, the device must be put into configuration mode first */
-// 			con.REQMOD = MCP25XXFD_OPMODE_CONFIGURATION;
-// 		}
+		if (con.OPMOD == MCP25XXFD_OPMODE_CONFIGURATION) {
+			/* Configuration mode can be switched to any other mode */
+			con.REQMOD = mode;
+		} else if (con.OPMOD == MCP25XXFD_OPMODE_NORMAL_CANFD ||
+			   con.OPMOD == MCP25XXFD_OPMODE_NORMAL_CAN2) {
+			/* Normal modes can only be directly switched to Sleep, Restricted, or Listen-Only modes */
+			if (mode == MCP25XXFD_OPMODE_SLEEP ||
+			    mode == MCP25XXFD_OPMODE_RESTRICTED ||
+			    mode == MCP25XXFD_OPMODE_LISTEN_ONLY) {
+				con.REQMOD = mode;
+			} else {
+				con.REQMOD = MCP25XXFD_OPMODE_CONFIGURATION;
+			}
+		} else if (con.OPMOD == MCP25XXFD_OPMODE_LISTEN_ONLY) {
+			/* Listen-Only mode can be directly switched back to normal modes */
+			if (mode == MCP25XXFD_OPMODE_NORMAL_CANFD ||
+			    mode == MCP25XXFD_OPMODE_NORMAL_CAN2) {
+				con.REQMOD = mode;
+			} else {
+				con.REQMOD = MCP25XXFD_OPMODE_CONFIGURATION;
+			}
+		} else {
+			/* Otherwise, the device must be put into configuration mode first */
+			con.REQMOD = MCP25XXFD_OPMODE_CONFIGURATION;
+		}
 
-// 		LOG_DBG("OPMOD: #%d, REQMOD #%d", con.OPMOD, con.REQMOD);
-// 		ret = mcp25xxfd_writeb(dev, MCP25XXFD_REG_CON + 3,
-// 				       &con.byte[3]);
-// 		k_mutex_unlock(&dev_data->mutex);
-// 		if (ret < 0) {
-// 			break;
-// 		}
+		LOG_DBG("OPMOD: #%d, REQMOD #%d", con.OPMOD, con.REQMOD);
+		ret = mcp25xxfd_writeb(dev, MCP25XXFD_REG_CON + 3,
+				       &con.byte[3]);
+		k_mutex_unlock(&dev_data->mutex);
+		if (ret < 0) {
+			break;
+		}
 
-// 		ret = k_sem_take(&dev_data->mode_sem, K_MSEC(2));
-// 		if (ret == -EAGAIN) {
-// 			return CAN_TIMEOUT;
-// 		}
-// 	}
-// 	return ret;
-// }
+		ret = k_sem_take(&dev_data->mode_sem, K_MSEC(2));
+		if (ret == -EAGAIN) {
+			return -EAGAIN;
+		}
+	}
+	return ret;
+}
 
 // static int mcp25xxfd_set_mode(const struct device *dev, enum can_mode mode)
 // {
@@ -444,7 +445,7 @@ done:
 // 	}
 
 // 	if (k_sem_take(&dev_data->tx_sem, timeout) != 0) {
-// 		return CAN_TIMEOUT;
+// 		return -EAGAIN;
 // 	}
 
 // 	k_mutex_lock(&dev_data->mutex, K_FOREVER);
