@@ -305,27 +305,27 @@ static int mcp25xxfd_set_raw_mode(const struct device *dev, uint8_t mode)
 	return ret;
 }
 
-// static int mcp25xxfd_set_mode(const struct device *dev, enum can_mode mode)
-// {
-// 	switch (mode) {
-// 	case CAN_NORMAL_MODE:
-// #if defined(CONFIG_CAN_FD_MODE)
-// 		return mcp25xxfd_set_raw_mode(dev,
-// 					      MCP25XXFD_OPMODE_NORMAL_CANFD);
-// #else
-// 		return mcp25xxfd_set_raw_mode(dev,
-// 					      MCP25XXFD_OPMODE_NORMAL_CAN2);
-// #endif
-// 	case CAN_LOOPBACK_MODE:
-// 		return mcp25xxfd_set_raw_mode(dev,
-// 					      MCP25XXFD_OPMODE_EXT_LOOPBACK);
-// 	default:
-// 		LOG_ERR("Unsupported CAN Mode %u", mode);
-// 	case CAN_SILENT_MODE:
-// 		return mcp25xxfd_set_raw_mode(dev,
-// 					      MCP25XXFD_OPMODE_LISTEN_ONLY);
-// 	}
-// }
+static int mcp25xxfd_set_mode(const struct device *dev, can_mode_t mode)
+{
+	switch (mode) {
+	case CAN_MODE_NORMAL:
+#if defined(CONFIG_CAN_FD_MODE)
+		return mcp25xxfd_set_raw_mode(dev,
+					      MCP25XXFD_OPMODE_NORMAL_CANFD);
+#else
+		return mcp25xxfd_set_raw_mode(dev,
+					      MCP25XXFD_OPMODE_NORMAL_CAN2);
+#endif
+	case CAN_MODE_LOOPBACK:
+		return mcp25xxfd_set_raw_mode(dev,
+					      MCP25XXFD_OPMODE_EXT_LOOPBACK);
+	default:
+		LOG_ERR("Unsupported CAN Mode %u", mode);
+	case CAN_MODE_LISTENONLY:
+		return mcp25xxfd_set_raw_mode(dev,
+					      MCP25XXFD_OPMODE_LISTEN_ONLY);
+	}
+}
 
 // static int mcp25xxfd_set_timing(const struct device *dev,
 // 				const struct can_timing *timing,
@@ -1040,7 +1040,7 @@ static int mcp25xxfd_set_raw_mode(const struct device *dev, uint8_t mode)
 // 		return ret;
 // 	}
 
-// 	ret = can_set_mode(dev, CAN_NORMAL_MODE);
+// 	ret = can_set_mode(dev, CAN_MODE_NORMAL);
 
 // 	return ret;
 // }
