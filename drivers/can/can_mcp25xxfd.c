@@ -488,85 +488,89 @@ static int mcp25xxfd_send(const struct device *dev,
 	return ret;
 }
 
-// static int mcp25xxfd_attach_isr(const struct device *dev,
-// 				can_rx_callback_t rx_cb, void *cb_arg,
-// 				const struct zcan_filter *filter)
-// {
-// 	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
-// 	union mcp25xxfd_fltcon fltcon;
-// 	union mcp25xxfd_fltobj fltobj = { .word = 0 };
-// 	union mcp25xxfd_mask mask = { .word = 0 };
-// 	int filter_idx = 0;
-// 	int ret;
+// TODO: rename to mcp25xxfd_add_rx_filter
+static int mcp25xxfd_attach_isr(const struct device *dev,
+				can_rx_callback_t rx_cb, void *cb_arg,
+				const struct can_filter *filter)
+{
+	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
+	union mcp25xxfd_fltcon fltcon;
+	union mcp25xxfd_fltobj fltobj = { .word = 0 };
+	union mcp25xxfd_mask mask = { .word = 0 };
+	int filter_idx = 0;
+	int ret;
 
-// 	__ASSERT(rx_cb != NULL, "rx_cb can not be null");
-// 	k_mutex_lock(&dev_data->mutex, K_FOREVER);
+	__ASSERT(rx_cb != NULL, "rx_cb can not be null");
+	k_mutex_lock(&dev_data->mutex, K_FOREVER);
 
-// 	while ((BIT(filter_idx) & dev_data->filter_usage) &&
-// 	       (filter_idx < CONFIG_CAN_MAX_FILTER)) {
-// 		filter_idx++;
-// 	}
+	/* find free filter */
+	while ((BIT(filter_idx) & dev_data->filter_usage) &&
+	       (filter_idx < CONFIG_CAN_MAX_FILTER)) {
+		filter_idx++;
+	}
 
-// 	if (filter_idx < CONFIG_CAN_MAX_FILTER) {
-// 		if (filter->id_type == CAN_STANDARD_IDENTIFIER) {
-// 			fltobj.SID = filter->id;
-// 			mask.MSID = filter->id_mask;
-// 		} else {
-// 			fltobj.SID = filter->id >> 18;
-// 			mask.MSID = filter->id_mask >> 18;
-// 			fltobj.EID = filter->id;
-// 			mask.MEID = filter->id_mask;
-// 			fltobj.EXIDE = 1;
-// 		}
-// 		mask.MIDE = 1;
-// 		ret = mcp25xxfd_writew(dev, MCP25XXFD_REG_FLTOBJ(filter_idx),
-// 				       &fltobj);
-// 		if (ret < 0) {
-// 			LOG_ERR("Failed to write register [%d]", ret);
-// 			goto done;
-// 		}
-// 		ret = mcp25xxfd_writew(dev, MCP25XXFD_REG_MASK(filter_idx),
-// 				       &mask);
-// 		if (ret < 0) {
-// 			LOG_ERR("Failed to write register [%d]", ret);
-// 			goto done;
-// 		}
+	if (filter_idx < CONFIG_CAN_MAX_FILTER) {
+		if (filter->flags & CAN_FRAME_IDE == 0U) {
+			fltobj.SID = filter->id;
+			mask.MSID = filter->mask;
+		} else {
+			fltobj.SID = filter->id >> 18;
+			mask.MSID = filter->mask >> 18;
+			fltobj.EID = filter->id;
+			mask.MEID = filter->mask;
+			fltobj.EXIDE = 1;
+		}
+		mask.MIDE = 1;
+		ret = mcp25xxfd_writew(dev, MCP25XXFD_REG_FLTOBJ(filter_idx),
+				       &fltobj);
+		if (ret < 0) {
+			LOG_ERR("Failed to write register [%d]", ret);
+			goto done;
+		}
+		ret = mcp25xxfd_writew(dev, MCP25XXFD_REG_MASK(filter_idx),
+				       &mask);
+		if (ret < 0) {
+			LOG_ERR("Failed to write register [%d]", ret);
+			goto done;
+		}
 
-// 		fltcon.FLTEN = 1;
-// 		fltcon.FLTBP = MCP25XXFD_RXFIFO_IDX;
-// 		ret = mcp25xxfd_writeb(dev, MCP21518FD_REG_FLTCON(filter_idx),
-// 				       fltcon.byte);
-// 		if (ret < 0) {
-// 			LOG_ERR("Failed to write register [%d]", ret);
-// 			goto done;
-// 		}
+		fltcon.FLTEN = 1;
+		fltcon.FLTBP = MCP25XXFD_RXFIFO_IDX;
+		ret = mcp25xxfd_writeb(dev, MCP21518FD_REG_FLTCON(filter_idx),
+				       fltcon.byte);
+		if (ret < 0) {
+			LOG_ERR("Failed to write register [%d]", ret);
+			goto done;
+		}
 
-// 		dev_data->filter_usage |= BIT(filter_idx);
-// 		dev_data->filter[filter_idx] = *filter;
-// 		dev_data->rx_cb[filter_idx] = rx_cb;
-// 		dev_data->cb_arg[filter_idx] = cb_arg;
-// 	} else {
-// 		filter_idx = CAN_NO_FREE_FILTER;
-// 	}
-// done:
-// 	k_mutex_unlock(&dev_data->mutex);
+		dev_data->filter_usage |= BIT(filter_idx);
+        dev_data->filter[filter_idx].flags = filter->flags;
+        dev_data->filter[filter_idx].id = filter->id;
+        dev_data->filter[filter_idx].mask = filter->mask;
+        dev_data->rx_cb[filter_idx] = rx_cb;
+        dev_data->cb_arg[filter_idx] = cb_arg;
+	} else {
+		filter_idx = ENOMEM;
+	}
+done:
+	k_mutex_unlock(&dev_data->mutex);
 
-// 	return filter_idx;
-// }
+	return filter_idx;
+}
 
-// static void mcp25xxfd_detach(const struct device *dev, int filter_nr)
-// {
-// 	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
-// 	union mcp25xxfd_fltcon fltcon;
+static void mcp25xxfd_detach(const struct device *dev, int filter_nr)
+{
+	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
+	union mcp25xxfd_fltcon fltcon;
 
-// 	k_mutex_lock(&dev_data->mutex, K_FOREVER);
+	k_mutex_lock(&dev_data->mutex, K_FOREVER);
 
-// 	dev_data->filter_usage &= ~BIT(filter_nr);
-// 	fltcon.FLTEN = 0;
-// 	mcp25xxfd_writeb(dev, MCP21518FD_REG_FLTCON(filter_nr), &fltcon);
+	dev_data->filter_usage &= ~BIT(filter_nr);
+	fltcon.FLTEN = 0;
+	mcp25xxfd_writeb(dev, MCP21518FD_REG_FLTCON(filter_nr), &fltcon);
 
-// 	k_mutex_unlock(&dev_data->mutex);
-// }
+	k_mutex_unlock(&dev_data->mutex);
+}
 
 // static void mcp25xxfd_register_state_change_isr(const struct device *dev,
 // 						can_state_change_isr_t isr)
