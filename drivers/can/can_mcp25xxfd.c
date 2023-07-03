@@ -327,100 +327,100 @@ static int mcp25xxfd_set_mode(const struct device *dev, can_mode_t mode)
 	}
 }
 
-// static int mcp25xxfd_set_timing(const struct device *dev,
-// 				const struct can_timing *timing,
-// 				const struct can_timing *timing_data)
-// {
-// 	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
-// 	uint8_t mode;
-// 	int ret;
+static int mcp25xxfd_set_timing(const struct device *dev,
+				const struct can_timing *timing,
+				const struct can_timing *timing_data)
+{
+	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
+	uint8_t mode;
+	int ret;
 
-// #if defined(CONFIG_CAN_FD_MODE)
-// 	if (!timing || !timing_data) {
-// #else
-// 	if (!timing) {
-// #endif
-// 		return -EINVAL;
-// 	}
+#if defined(CONFIG_CAN_FD_MODE)
+	if (!timing || !timing_data) {
+#else
+	if (!timing) {
+#endif
+		return -EINVAL;
+	}
 
-// 	k_mutex_lock(&dev_data->mutex, K_FOREVER);
+	k_mutex_lock(&dev_data->mutex, K_FOREVER);
 
-// 	ret = mcp25xxfd_get_raw_mode(dev, &mode);
-// 	if (ret < 0) {
-// 		goto done;
-// 	}
-// 	ret = mcp25xxfd_set_raw_mode(dev, MCP25XXFD_OPMODE_CONFIGURATION);
-// 	if (ret < 0) {
-// 		goto done;
-// 	}
+	ret = mcp25xxfd_get_raw_mode(dev, &mode);
+	if (ret < 0) {
+		goto done;
+	}
+	ret = mcp25xxfd_set_raw_mode(dev, MCP25XXFD_OPMODE_CONFIGURATION);
+	if (ret < 0) {
+		goto done;
+	}
 
-// 	union mcp25xxfd_nbtcfg nbtcfg = {
-// 		.BRP = timing->prescaler - 1,
-// 		.TSEG1 = (timing->prop_seg + timing->phase_seg1) - 1,
-// 		.TSEG2 = timing->phase_seg2 - 1,
-// 		.SJW = timing->sjw - 1,
-// 	};
-// 	ret = mcp25xxfd_writew(dev, MCP25XXFD_REG_NBTCFG, nbtcfg.byte);
-// 	if (ret < 0) {
-// 		LOG_ERR("Failed to write device configuration [%d]", ret);
-// 		goto done;
-// 	}
+	union mcp25xxfd_nbtcfg nbtcfg = {
+		.BRP = timing->prescaler - 1,
+		.TSEG1 = (timing->prop_seg + timing->phase_seg1) - 1,
+		.TSEG2 = timing->phase_seg2 - 1,
+		.SJW = timing->sjw - 1,
+	};
+	ret = mcp25xxfd_writew(dev, MCP25XXFD_REG_NBTCFG, nbtcfg.byte);
+	if (ret < 0) {
+		LOG_ERR("Failed to write device configuration [%d]", ret);
+		goto done;
+	}
 
-// #if defined(CONFIG_CAN_FD_MODE)
-// 	union mcp25xxfd_dbtcfg ndtcfg = {
-// 		.BRP = timing_data->prescaler - 1,
-// 		.TSEG1 = (timing_data->prop_seg + timing_data->phase_seg1) - 1,
-// 		.TSEG2 = timing_data->phase_seg2 - 1,
-// 		.SJW = timing_data->sjw - 1,
-// 	};
-// 	ret = mcp25xxfd_writew(dev, MCP25XXFD_REG_DBTCFG, ndtcfg.byte);
-// 	if (ret < 0) {
-// 		LOG_ERR("Failed to write device configuration [%d]", ret);
-// 		goto done;
-// 	}
-// #endif
+#if defined(CONFIG_CAN_FD_MODE)
+	union mcp25xxfd_dbtcfg ndtcfg = {
+		.BRP = timing_data->prescaler - 1,
+		.TSEG1 = (timing_data->prop_seg + timing_data->phase_seg1) - 1,
+		.TSEG2 = timing_data->phase_seg2 - 1,
+		.SJW = timing_data->sjw - 1,
+	};
+	ret = mcp25xxfd_writew(dev, MCP25XXFD_REG_DBTCFG, ndtcfg.byte);
+	if (ret < 0) {
+		LOG_ERR("Failed to write device configuration [%d]", ret);
+		goto done;
+	}
+#endif
 
-// 	union mcp25xxfd_tdc tdc = {
-// 		.EDGFLTEN = 0,
-// 		.SID11EN = 0,
-// #if defined(CONFIG_CAN_FD_MODE)
-// 		.TDCMOD = MCP25XXFD_TDCMOD_AUTO,
-// 		.TDCO = timing_data->prescaler *
-// 			(timing_data->prop_seg + timing_data->phase_seg1),
-// #else
-// 		.TDCMOD = MCP25XXFD_TDCMOD_DISABLED,
-// #endif
-// 	};
-// 	ret = mcp25xxfd_writew(dev, MCP25XXFD_REG_TDC, &tdc);
-// 	if (ret < 0) {
-// 		LOG_ERR("Failed to write device configuration [%d]", ret);
-// 		goto done;
-// 	}
+	union mcp25xxfd_tdc tdc = {
+		.EDGFLTEN = 0,
+		.SID11EN = 0,
+#if defined(CONFIG_CAN_FD_MODE)
+		.TDCMOD = MCP25XXFD_TDCMOD_AUTO,
+		.TDCO = timing_data->prescaler *
+			(timing_data->prop_seg + timing_data->phase_seg1),
+#else
+		.TDCMOD = MCP25XXFD_TDCMOD_DISABLED,
+#endif
+	};
+	ret = mcp25xxfd_writew(dev, MCP25XXFD_REG_TDC, &tdc);
+	if (ret < 0) {
+		LOG_ERR("Failed to write device configuration [%d]", ret);
+		goto done;
+	}
 
-// #if defined(CONFIG_CAN_RX_TIMESTAMP)
-// 	union mcp25xxfd_tscon tscon = {
-// 		.TBCEN = 1,
-// 		.TSRES = 0,
-// 		.TSEOF = 0,
-// 		.TBCPRE = timing->prescaler - 1,
-// 	};
-// 	ret = mcp25xxfd_writew(dev, MCP25XXFD_REG_TSCON, &tscon);
-// 	if (ret < 0) {
-// 		LOG_ERR("Failed to write device configuration [%d]", ret);
-// 		goto done;
-// 	}
-// #endif
+#if defined(CONFIG_CAN_RX_TIMESTAMP)
+	union mcp25xxfd_tscon tscon = {
+		.TBCEN = 1,
+		.TSRES = 0,
+		.TSEOF = 0,
+		.TBCPRE = timing->prescaler - 1,
+	};
+	ret = mcp25xxfd_writew(dev, MCP25XXFD_REG_TSCON, &tscon);
+	if (ret < 0) {
+		LOG_ERR("Failed to write device configuration [%d]", ret);
+		goto done;
+	}
+#endif
 
-// 	ret = mcp25xxfd_set_raw_mode(dev, mode);
-// 	if (ret < 0) {
-// 		goto done;
-// 	}
+	ret = mcp25xxfd_set_raw_mode(dev, mode);
+	if (ret < 0) {
+		goto done;
+	}
 
-// done:
-// 	k_mutex_unlock(&dev_data->mutex);
+done:
+	k_mutex_unlock(&dev_data->mutex);
 
-// 	return ret;
-// }
+	return ret;
+}
 
 // static int mcp25xxfd_send(const struct device *dev,
 // 			  const struct zcan_frame *msg, k_timeout_t timeout,
