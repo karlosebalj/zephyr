@@ -582,27 +582,28 @@ static void mcp25xxfd_register_state_change_isr(const struct device *dev,
 	dev_data->state_change_cb = cb;
 }
 
-// static enum can_state mcp25xxfd_get_state(const struct device *dev,
-// 					  struct can_bus_err_cnt *err_cnt)
-// {
-// 	return DEV_DATA(dev)->state;
-// }
+static enum can_state mcp25xxfd_get_state(const struct device *dev,
+					  struct can_bus_err_cnt *err_cnt)
+{
+	return DEV_DATA(dev)->state;
+}
 
-// static int mcp25xxfd_get_core_clock(const struct device *dev, uint32_t *rate)
-// {
-// 	const struct mcp25xxfd_config *dev_cfg = DEV_CFG(dev);
+static int mcp25xxfd_get_core_clock(const struct device *dev, uint32_t *rate)
+{
+	const struct mcp25xxfd_config *dev_cfg = DEV_CFG(dev);
 
-// 	*rate = dev_cfg->osc_freq;
-// 	return 0;
-// }
+	*rate = dev_cfg->osc_freq;
+	return 0;
+}
 
-// #ifndef CONFIG_CAN_AUTO_BUS_OFF_RECOVERY
-// static void mcp25xxfd_recover(const struct device *dev, k_timeout_t timeout)
-// {
-// 	ARG_UNUSED(dev);
-// 	ARG_UNUSED(timeout);
-// }
-// #endif
+#ifndef CONFIG_CAN_AUTO_BUS_OFF_RECOVERY
+// TODO: Change it to int function as in mcp2515_recover, add dev_data
+static void mcp25xxfd_recover(const struct device *dev, k_timeout_t timeout)
+{
+	ARG_UNUSED(dev);
+	ARG_UNUSED(timeout);
+}
+#endif
 
 // static void mcp25xxfd_rx(const struct device *dev, int fifo_idx)
 // {
