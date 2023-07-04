@@ -623,27 +623,30 @@ static void mcp25xxfd_rx(const struct device *dev, int fifo_idx)
 	}
 }
 
-// static void mcp25xxfd_tx_done(const struct device *dev)
-// {
-// 	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
-// 	struct mcp25xxfd_tefobj tefobj;
-// 	uint8_t mailbox_idx;
+static void mcp25xxfd_tx_done(const struct device *dev)
+{
+	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
+	can_tx_callback_t callback;
+	struct mcp25xxfd_tefobj *tefobj;
+	uint8_t mailbox_idx;
 
-// 	while (mcp25xxfd_fifo_read(dev, MCP25XXFD_REG_TEFCON, &tefobj,
-// 				   sizeof(tefobj)) >= 0) {
-// 		mailbox_idx = tefobj.SEQ;
-// 		if (dev_data->mailbox[mailbox_idx].cb == NULL) {
-// 			k_sem_give(&dev_data->mailbox[mailbox_idx].tx_sem);
-// 		} else {
-// 			dev_data->mailbox[mailbox_idx].cb(
-// 				0, dev_data->mailbox[mailbox_idx].cb_arg);
-// 		}
-// 		k_mutex_lock(&dev_data->mutex, K_FOREVER);
-// 		dev_data->mailbox_usage &= ~BIT(mailbox_idx);
-// 		k_mutex_unlock(&dev_data->mutex);
-// 		k_sem_give(&dev_data->tx_sem);
-// 	}
-// }
+	while (mcp25xxfd_fifo_read(dev, MCP25XXFD_REG_TEFCON, &tefobj,
+				   sizeof(tefobj)) >= 0) {
+		mailbox_idx = tefobj->SEQ;
+		if (dev_data->mailbox[mailbox_idx].cb == NULL) {
+			k_sem_give(&dev_data->mailbox[mailbox_idx].tx_sem);
+		} else {
+			dev_data->mailbox[mailbox_idx].cb(
+				dev, 0, dev_data->mailbox[mailbox_idx].cb_arg);
+		}
+
+		k_mutex_lock(&dev_data->mutex, K_FOREVER);
+		dev_data->mailbox_usage &= ~BIT(mailbox_idx);
+		dev_data->mailbox[mailbox_idx].cb = NULL;
+		k_mutex_unlock(&dev_data->mutex);
+		k_sem_give(&dev_data->tx_sem);
+	}
+}
 
 // static void mcp25xxfd_int_thread(const struct device *dev)
 // {
