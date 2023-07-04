@@ -739,6 +739,7 @@ static void mcp25xxfd_int_thread(const struct device *dev)
 		}
 
 		/* Re-enable pin interrupts */
+		// TODO: Change to gpio_pin_interrupt_configure_dt
 		if (gpio_pin_interrupt_configure(dev_data->int_gpio, dev_cfg->int_pin,
 						 GPIO_INT_LEVEL_ACTIVE)) {
 			LOG_ERR("Couldn't enable pin interrupt");
@@ -747,20 +748,20 @@ static void mcp25xxfd_int_thread(const struct device *dev)
 	}
 }
 
-// static void mcp25xxfd_int_gpio_callback(const struct device *dev,
-// 					struct gpio_callback *cb, uint32_t pins)
-// {
-// 	struct mcp25xxfd_data *dev_data =
-// 		CONTAINER_OF(cb, struct mcp25xxfd_data, int_gpio_cb);
+static void mcp25xxfd_int_gpio_callback(const struct device *dev,
+					struct gpio_callback *cb, uint32_t pins)
+{
+	struct mcp25xxfd_data *dev_data =
+		CONTAINER_OF(cb, struct mcp25xxfd_data, int_gpio_cb);
 
-// 	/* Disable pin interrupts */
-// 	if (gpio_pin_interrupt_configure(dev, dev_data->int_pin, GPIO_INT_DISABLE)) {
-// 		LOG_ERR("Couldn't disable pin interrupt");
-// 		k_oops();
-// 	}
+	/* Disable pin interrupts */
+	if (gpio_pin_interrupt_configure(dev, dev_data->int_pin, GPIO_INT_DISABLE)) {
+		LOG_ERR("Couldn't disable pin interrupt");
+		k_oops();
+	}
 
-// 	k_sem_give(&dev_data->int_sem);
-// }
+	k_sem_give(&dev_data->int_sem);
+}
 
 // static const struct can_driver_api can_api_funcs = {
 // 	.set_mode = mcp25xxfd_set_mode,
