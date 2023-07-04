@@ -510,7 +510,7 @@ static int mcp25xxfd_attach_isr(const struct device *dev,
 	}
 
 	if (filter_idx < CONFIG_CAN_MAX_FILTER) {
-		if (filter->flags & CAN_FRAME_IDE == 0U) {
+		if ((filter->flags & CAN_FRAME_IDE) == 0U) {
 			fltobj.SID = filter->id;
 			mask.MSID = filter->mask;
 		} else {
@@ -572,13 +572,15 @@ static void mcp25xxfd_detach(const struct device *dev, int filter_nr)
 	k_mutex_unlock(&dev_data->mutex);
 }
 
-// static void mcp25xxfd_register_state_change_isr(const struct device *dev,
-// 						can_state_change_isr_t isr)
-// {
-// 	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
+// TODO: Change it like the one inside mcp2515: mcp2515_set_state_change_callback on line 681
+// TODO: Add another parameter *user_data
+static void mcp25xxfd_register_state_change_isr(const struct device *dev,
+						can_state_change_callback_t cb)
+{
+	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
 
-// 	dev_data->state_change_isr = isr;
-// }
+	dev_data->state_change_cb = cb;
+}
 
 // static enum can_state mcp25xxfd_get_state(const struct device *dev,
 // 					  struct can_bus_err_cnt *err_cnt)

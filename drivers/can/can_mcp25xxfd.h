@@ -60,7 +60,7 @@ struct mcp25xxfd_data {
 
 	/* General */
 	enum can_state state;
-	// can_state_change_isr_t state_change_isr;
+	can_state_change_callback_t state_change_cb;
 	struct k_mutex mutex;
 	struct k_sem mode_sem;
 
