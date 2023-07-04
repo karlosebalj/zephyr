@@ -648,112 +648,104 @@ static void mcp25xxfd_tx_done(const struct device *dev)
 	}
 }
 
-// static void mcp25xxfd_int_thread(const struct device *dev)
-// {
-// 	const struct mcp25xxfd_config *dev_cfg = DEV_CFG(dev);
-// 	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
-// 	union mcp25xxfd_intregs intregs;
-// 	union mcp25xxfd_trec trec;
-// 	uint32_t ints_before;
-// 	int ret;
+static void mcp25xxfd_int_thread(const struct device *dev)
+{
+	const struct mcp25xxfd_config *dev_cfg = DEV_CFG(dev);
+	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
+	union mcp25xxfd_intregs intregs;
+	union mcp25xxfd_trec *trec;
+	uint32_t ints_before;
+	int ret;
 
-// 	while (1) {
-// 		k_sem_take(&dev_data->int_sem, K_FOREVER);
+	while (1) {
+		k_sem_take(&dev_data->int_sem, K_FOREVER);
+		while (1) {
+			ret = mcp25xxfd_read(dev, MCP25XXFD_REG_INTREGS, &intregs, sizeof(intregs));
+			if (ret < 0) {
+				continue;
+			}
+			ints_before = intregs.ints.word;
 
-// 		while (1) {
-// 			ret = mcp25xxfd_read(dev, MCP25XXFD_REG_INTREGS,
-// 					     &intregs, sizeof(intregs));
-// 			if (ret < 0) {
-// 				continue;
-// 			}
-// 			ints_before = intregs.ints.word;
+			if (intregs.ints.RXIF) {
+				mcp25xxfd_rx(dev, MCP25XXFD_RXFIFO_IDX);
+			}
 
-// 			if (intregs.ints.RXIF) {
-// 				mcp25xxfd_rx(dev, MCP25XXFD_RXFIFO_IDX);
-// 			}
+			if (intregs.ints.TEFIF) {
+				mcp25xxfd_tx_done(dev);
+			}
 
-// 			if (intregs.ints.TEFIF) {
-// 				mcp25xxfd_tx_done(dev);
-// 			}
+			if (intregs.ints.MODIF) {
+				k_sem_give(&dev_data->mode_sem);
+				intregs.ints.MODIF = 0;
+			}
 
-// 			if (intregs.ints.MODIF) {
-// 				k_sem_give(&dev_data->mode_sem);
-// 				intregs.ints.MODIF = 0;
-// 			}
+			if (intregs.ints.CERRIF) {
+				ret = mcp25xxfd_readw(dev, MCP25XXFD_REG_TREC,&trec);
+				if (ret >= 0) {
+					enum can_state new_state;
 
-// 			if (intregs.ints.CERRIF) {
-// 				ret = mcp25xxfd_readw(dev, MCP25XXFD_REG_TREC,
-// 						      &trec);
-// 				if (ret >= 0) {
-// 					enum can_state new_state;
+					if (trec->TXBO) {
+						new_state = CAN_STATE_BUS_OFF;
 
-// 					if (trec.TXBO) {
-// 						new_state = CAN_BUS_OFF;
+						/* Upon entering bus-off, all the fifos are reset. */
+						LOG_DBG("All FIFOs Reset");
+						k_mutex_lock(&dev_data->mutex, K_FOREVER);
+						for (int i = 0; i < MCP25XXFD_TXFIFOS; i++) {
+							if (!(dev_data->mailbox_usage & BIT(i))) {
+								continue;
+							}
+							if (dev_data->mailbox[i].cb == NULL) {
+								k_sem_give(&dev_data->mailbox[i].tx_sem);
+							} else {
+								dev_data->mailbox[i].cb(dev, CAN_STATE_BUS_OFF, dev_data->mailbox[i].cb_arg);
+							}
+							dev_data->mailbox_usage &= ~BIT(i);
+							dev_data->mailbox[i].cb = NULL;
+							k_sem_give(&dev_data->tx_sem);
+						}
+						k_mutex_unlock(&dev_data->mutex);
+					} else if (trec->TXBP || trec->RXBP) {
+						new_state = CAN_STATE_ERROR_PASSIVE;
+					} else {
+						new_state = CAN_STATE_ERROR_ACTIVE;
+					}
+					if (dev_data->state != new_state) {
+						LOG_DBG("State %d -> %d (tx: %d, rx: %d)", dev_data->state, new_state, trec->TEC, trec->REC);
+						dev_data->state = new_state;
+						if (dev_data->state_change_cb) {
+							struct can_bus_err_cnt err_cnt;
+							err_cnt.rx_err_cnt = trec->REC;
+							err_cnt.tx_err_cnt = trec->TEC;
+							dev_data->state_change_cb(dev, new_state, err_cnt, dev_data->state_change_cb_data);
+						}
+					}
 
-// 						/* Upon entering bus-off, all the fifos are reset. */
-// 						LOG_DBG("All FIFOs Reset");
-// 						k_mutex_lock(&dev_data->mutex, K_FOREVER);
-// 						for (int i = 0; i < MCP25XXFD_TXFIFOS; i++) {
-// 							if (!(dev_data->mailbox_usage & BIT(i))) {
-// 								continue;
-// 							}
-// 							if (dev_data->mailbox[i].cb == NULL) {
-// 								k_sem_give(&dev_data->mailbox[i].tx_sem);
-// 							} else {
-// 								dev_data->mailbox[i].cb(
-// 									CAN_TX_BUS_OFF, dev_data->mailbox[i].cb_arg);
-// 							}
-// 							dev_data->mailbox_usage &= ~BIT(i);
-// 							k_sem_give(&dev_data->tx_sem);
-// 						}
-// 						k_mutex_unlock(&dev_data->mutex);
-// 					} else if (trec.TXBP || trec.RXBP) {
-// 						new_state = CAN_ERROR_PASSIVE;
-// 					} else {
-// 						new_state = CAN_ERROR_ACTIVE;
-// 					}
-// 					if (dev_data->state != new_state) {
-// 						LOG_DBG("State %d -> %d (tx: %d, rx: %d)", dev_data->state, new_state, trec.TEC, trec.REC);
-// 						dev_data->state = new_state;
-// 						if (dev_data->state_change_isr) {
-// 							struct can_bus_err_cnt
-// 								err_cnt;
-// 							err_cnt.rx_err_cnt =
-// 								trec.REC;
-// 							err_cnt.tx_err_cnt =
-// 								trec.TEC;
-// 							dev_data->state_change_isr(
-// 								new_state,
-// 								err_cnt);
-// 						}
-// 					}
+					intregs.ints.CERRIF = 0;
+				}
+			}
 
-// 					intregs.ints.CERRIF = 0;
-// 				}
-// 			}
+			if (ints_before != intregs.ints.word) {
+				mcp25xxfd_writew(dev, MCP25XXFD_REG_INT, &intregs.ints);
+			}
 
-// 			if (ints_before != intregs.ints.word) {
-// 				mcp25xxfd_writew(dev, MCP25XXFD_REG_INT, &intregs.ints);
-// 			}
+			/* Break from loop if INT pin is inactive */
+			ret = gpio_pin_get(dev_data->int_gpio, dev_cfg->int_pin);
+			if (ret < 0) {
+				LOG_ERR("Couldn't read INT pin");
+			} else if (ret == 0) {
+				/* All interrupt flags handled */
+				break;
+			}
+		}
 
-// 			/* Break from loop if INT pin is inactive */
-// 			ret = gpio_pin_get(dev_data->int_gpio,
-// 					   dev_cfg->int_pin);
-// 			if (ret <= 0) {
-// 				/* All interrupt flags handled, but we'll abort if
-// 				 * an error occurs to avoid deadlock. */
-// 				break;
-// 			}
-// 		}
-
-// 		/* Re-enable pin interrupts */
-// 		if (gpio_pin_interrupt_configure(dev_data->int_gpio, dev_cfg->int_pin,
-// 						 GPIO_INT_LEVEL_ACTIVE)) {
-// 			LOG_ERR("Couldn't enable pin interrupt");
-// 			k_oops();
-// 		}
-// 	}
-// }
+		/* Re-enable pin interrupts */
+		if (gpio_pin_interrupt_configure(dev_data->int_gpio, dev_cfg->int_pin,
+						 GPIO_INT_LEVEL_ACTIVE)) {
+			LOG_ERR("Couldn't enable pin interrupt");
+			k_oops();
+		}
+	}
+}
 
 // static void mcp25xxfd_int_gpio_callback(const struct device *dev,
 // 					struct gpio_callback *cb, uint32_t pins)
