@@ -213,6 +213,7 @@ static void mcp25xxfd_canframe_to_txobj(const struct can_frame *src,
 }
 
 // TODO: Check this function for flags also
+// TODO: from mcp25xxfd_rx removed const from struct mcp25xxfd_rxobj *src
 static void mcp25xxfd_rxobj_to_canframe(const struct mcp25xxfd_rxobj *src,
 					 struct can_frame *dst)
 {
@@ -605,21 +606,22 @@ static void mcp25xxfd_recover(const struct device *dev, k_timeout_t timeout)
 }
 #endif
 
-// static void mcp25xxfd_rx(const struct device *dev, int fifo_idx)
-// {
-// 	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
-// 	struct mcp25xxfd_rxobj rx_frame;
-// 	struct zcan_frame frame;
+// TODO: adjust to be the same as mcp2515_rx in can_mcp2515.c on line 720
+static void mcp25xxfd_rx(const struct device *dev, int fifo_idx)
+{
+	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
+	struct mcp25xxfd_rxobj *rx_frame;
+	struct can_frame frame;
 
-// 	while (mcp25xxfd_fifo_read(dev, MCP25XXFD_REG_FIFOCON(fifo_idx), &rx_frame,
-// 				   sizeof(rx_frame)) >= 0) {
-// 		mcp25xxfd_rxobj_to_canframe(&rx_frame, &frame);
-// 		if (dev_data->filter_usage & BIT(rx_frame.FILHIT)) {
-// 			dev_data->rx_cb[rx_frame.FILHIT](
-// 				&frame, dev_data->cb_arg[rx_frame.FILHIT]);
-// 		}
-// 	}
-// }
+	// TODO: Refactor it so that it is like lines from 732 to 734 in mcp2515
+	while (mcp25xxfd_fifo_read(dev, MCP25XXFD_REG_FIFOCON(fifo_idx), &rx_frame,
+				   sizeof(rx_frame)) >= 0) {
+		mcp25xxfd_rxobj_to_canframe(rx_frame, &frame);
+		if (dev_data->filter_usage & BIT(rx_frame->FILHIT)) {
+			dev_data->rx_cb[rx_frame->FILHIT](dev, &frame, dev_data->cb_arg[rx_frame->FILHIT]);
+		}
+	}
+}
 
 // static void mcp25xxfd_tx_done(const struct device *dev)
 // {
