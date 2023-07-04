@@ -763,41 +763,25 @@ static void mcp25xxfd_int_gpio_callback(const struct device *dev,
 	k_sem_give(&dev_data->int_sem);
 }
 
-// static const struct can_driver_api can_api_funcs = {
-// 	.set_mode = mcp25xxfd_set_mode,
-// 	.set_timing = mcp25xxfd_set_timing,
-// 	.send = mcp25xxfd_send,
-// 	.attach_isr = mcp25xxfd_attach_isr,
-// 	.detach = mcp25xxfd_detach,
-// #ifndef CONFIG_CAN_AUTO_BUS_OFF_RECOVERY
-// 	.recover = mcp25xxfd_recover,
-// #endif
-// 	.get_state = mcp25xxfd_get_state,
-// 	.register_state_change_isr = mcp25xxfd_register_state_change_isr,
-// 	.get_core_clock = mcp25xxfd_get_core_clock,
-// 	.timing_min = { .sjw = 1,
-// 			.prop_seg = 0x0,
-// 			.phase_seg1 = 2,
-// 			.phase_seg2 = 1,
-// 			.prescaler = 1 },
-// 	.timing_max = { .sjw = 128,
-// 			.prop_seg = 0x0,
-// 			.phase_seg1 = 256,
-// 			.phase_seg2 = 128,
-// 			.prescaler = 256 },
-// #if defined(CONFIG_CAN_FD_MODE)
-// 	.timing_min_data = { .sjw = 1,
-// 			     .prop_seg = 0x0,
-// 			     .phase_seg1 = 1,
-// 			     .phase_seg2 = 1,
-// 			     .prescaler = 1 },
-// 	.timing_max_data = { .sjw = 16,
-// 			     .prop_seg = 0x0,
-// 			     .phase_seg1 = 32,
-// 			     .phase_seg2 = 16,
-// 			     .prescaler = 256 }
-// #endif
-// };
+static const struct can_driver_api can_api_funcs = {
+	.set_mode = mcp25xxfd_set_mode,
+	.set_timing = mcp25xxfd_set_timing,
+	.send = mcp25xxfd_send,
+	.add_rx_filter = mcp25xxfd_attach_isr,
+	.remove_rx_filter = mcp25xxfd_detach,
+#ifndef CONFIG_CAN_AUTO_BUS_OFF_RECOVERY
+	.recover = mcp25xxfd_recover,
+#endif
+	.get_state = mcp25xxfd_get_state,
+	.set_state_change_callback = mcp25xxfd_register_state_change_isr,
+	.get_core_clock = mcp25xxfd_get_core_clock,
+	.timing_min = MCP25XXFD_TIMING_MIN_INITIALIZER,
+	.timing_max = MCP25XXFD_TIMING_MAX_INITIALIZER,
+#if defined(CONFIG_CAN_FD_MODE)
+	.timing_data_min = MCP25XXFD_TIMING_DATA_MIN_INITIALIZER,
+	.timing_data_max = MCP25XXFD_TIMING_DATA_MAX_INITIALIZER,
+#endif
+};
 
 // static int mcp25xxfd_init(const struct device *dev)
 // {

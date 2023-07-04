@@ -140,6 +140,42 @@ struct mcp25xxfd_config {
 #define MCP25XXFD_TDCMOD_MANUAL 0b01
 #define MCP25XXFD_TDCMOD_DISABLED 0b00
 
+#define MCP25XXFD_TIMING_MIN_INITIALIZER				\
+	{								\
+		.sjw = 1,						\
+		.prop_seg = 0,						\
+		.phase_seg1 = 2,					\
+		.phase_seg2 = 1,					\
+		.prescaler = 1						\
+	}
+
+#define MCP25XXFD_TIMING_MAX_INITIALIZER				\
+	{								\
+		.sjw = 128,						\
+		.prop_seg = 0,						\
+		.phase_seg1 = 256,					\
+		.phase_seg2 = 128,					\
+		.prescaler = 256					\
+	}
+
+#define MCP25XXFD_TIMING_DATA_MIN_INITIALIZER				\
+	{								\
+		.sjw = 1,						\
+		.prop_seg = 0,						\
+		.phase_seg1 = 1,					\
+		.phase_seg2 = 1,					\
+		.prescaler = 1						\
+	}
+
+#define MCP25XXFD_TIMING_DATA_MAX_INITIALIZER				\
+	{								\
+		.sjw = 16,						\
+		.prop_seg = 0,						\
+		.phase_seg1 = 32,					\
+		.phase_seg2 = 16,					\
+		.prescaler = 256					\
+	}
+
 /* MCP25XXFD Registers */
 
 #define MCP25XXFD_REG_CON 0x000
