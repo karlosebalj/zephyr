@@ -783,36 +783,35 @@ static const struct can_driver_api can_api_funcs = {
 #endif
 };
 
-// static int mcp25xxfd_init(const struct device *dev)
-// {
-// 	const struct mcp25xxfd_config *dev_cfg = DEV_CFG(dev);
-// 	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
-// 	int ret;
-// 	struct can_timing timing;
+static int mcp25xxfd_init(const struct device *dev)
+{
+	const struct mcp25xxfd_config *dev_cfg = DEV_CFG(dev);
+	struct mcp25xxfd_data *dev_data = DEV_DATA(dev);
+	int ret;
+	struct can_timing timing;
 
-// #if defined(CONFIG_CAN_FD_MODE)
-// 	struct can_timing timing_data;
-// #endif
+#if defined(CONFIG_CAN_FD_MODE)
+	struct can_timing timing_data;
+#endif
 
-// 	k_sem_init(&dev_data->int_sem, 0, 1);
-// 	k_sem_init(&dev_data->mode_sem, 0, 1);
-// 	k_sem_init(&dev_data->tx_sem, MCP25XXFD_TXFIFOS,
-// 		   MCP25XXFD_TXFIFOS);
-// 	for (int i = 0; i < MCP25XXFD_TXFIFOS; i++) {
-// 		k_sem_init(&dev_data->mailbox[i].tx_sem, 0, 1);
-// 	}
-// 	k_mutex_init(&dev_data->mutex);
+	k_sem_init(&dev_data->int_sem, 0, 1);
+	k_sem_init(&dev_data->mode_sem, 0, 1);
+	k_sem_init(&dev_data->tx_sem, MCP25XXFD_TXFIFOS,MCP25XXFD_TXFIFOS);
+	for (int i = 0; i < MCP25XXFD_TXFIFOS; i++) {
+		k_sem_init(&dev_data->mailbox[i].tx_sem, 0, 1);
+	}
+	k_mutex_init(&dev_data->mutex);
 
-// 	/* SPI Init */
-// 	dev_data->spi_cfg.operation = SPI_WORD_SET(8);
-// 	dev_data->spi_cfg.frequency = dev_cfg->spi_freq;
-// 	dev_data->spi_cfg.slave = dev_cfg->spi_slave;
-// 	dev_data->spi = device_get_binding(dev_cfg->spi_port);
-// 	if (!dev_data->spi) {
-// 		LOG_ERR("SPI master port %s not found", dev_cfg->spi_port);
-// 		return -EINVAL;
-// 	}
-
+	/* SPI Init */
+	dev_data->spi_cfg.operation = SPI_WORD_SET(8);
+	dev_data->spi_cfg.frequency = dev_cfg->spi_freq;
+	dev_data->spi_cfg.slave = dev_cfg->spi_slave;
+	dev_data->spi = device_get_binding(dev_cfg->spi_port);
+	if (!dev_data->spi) {
+		LOG_ERR("SPI master port %s not found", dev_cfg->spi_port);
+		return -EINVAL;
+	}
+// TODO: Stopped here!!!!!
 // #if DT_INST_SPI_DEV_HAS_CS_GPIOS(0)
 // 	dev_data->spi_cs_ctrl.gpio_dev =
 // 		device_get_binding(dev_cfg->spi_cs_port);
@@ -1016,26 +1015,36 @@ static const struct can_driver_api can_api_funcs = {
 // 		goto done;
 // 	}
 
-// 	LOG_DBG("%d TX FIFOS: 1 element", MCP25XXFD_TXFIFOS);
-// 	LOG_DBG("1 RX FIFO: %ld elements", MCP25XXFD_RXFIFO_LENGTH);
-// 	LOG_DBG("%ldb of %db RAM Allocated", MCP25XXFD_TEF_SIZE + MCP25XXFD_TXFIFOS_SIZE + MCP25XXFD_RXFIFO_SIZE, MCP25XXFD_RAM_SIZE);
+	LOG_DBG("%d TX FIFOS: 1 element", MCP25XXFD_TXFIFOS);
+	LOG_DBG("1 RX FIFO: %ld elements", MCP25XXFD_RXFIFO_LENGTH);
+	LOG_DBG("%ldb of %db RAM Allocated", MCP25XXFD_TEF_SIZE + MCP25XXFD_TXFIFOS_SIZE + MCP25XXFD_RXFIFO_SIZE, MCP25XXFD_RAM_SIZE);
 
-// done:
-// 	k_mutex_unlock(&dev_data->mutex);
+done:
+	k_mutex_unlock(&dev_data->mutex);
+	if (ret) {
+		return ret;
+	}
 
-// #if defined(CONFIG_CAN_FD_MODE)
-// 	ret = can_set_timing(dev, &timing, &timing_data);
-// #else
-// 	ret = can_set_timing(dev, &timing, NULL);
-// #endif
-// 	if (ret < 0) {
-// 		return ret;
-// 	}
+	ret = can_set_timing(dev, &timing);
+	if (ret < 0) {
+		return ret;
+	}
 
-// 	ret = can_set_mode(dev, CAN_MODE_NORMAL);
+#if defined(CONFIG_CAN_FD_MODE)
+	ret = can_set_timing_data(dev, &timing_data);
+	if (ret < 0) {
+		return ret;
+	}
+#endif
 
-// 	return ret;
-// }
+#if defined(CONFIG_CAN_FD_MODE)
+	ret = can_set_mode(dev, CAN_MODE_FD);
+#else
+	ret = can_set_mode(dev, CAN_MODE_NORMAL);
+#endif
+
+	return ret;
+}
 
 // #if DT_NODE_HAS_STATUS(DT_DRV_INST(0), okay)
 
