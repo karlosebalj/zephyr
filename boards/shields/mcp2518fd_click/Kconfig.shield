@@ -1,0 +1,5 @@
+# Copyright (c) 2023 Andriy Gelman
+# SPDX-License-Identifier: Apache-2.0
+
+config MCP2518FD_CLICK
+	def_bool $(shields_list_contains,mcp2518fd_click)

@@ -1,0 +1,28 @@
+&mikrobus_spi {
+	cs-gpios = <&mikrobus_header 2 GPIO_ACTIVE_LOW>;
+	mcp2518fd: canfd@0 {
+		compatible = "microchip,mcp25xxfd";
+		status = "okay";
+
+		spi-max-frequency = <18000000>;
+		int-gpios = <&mikrobus_header 7 GPIO_ACTIVE_LOW>;
+		reg = <0x0>;
+		osc-freq = <40000000>;
+		bus-speed = <500000>;
+		bus-speed-data = <2000000>;
+		prop-seg = <0>;
+		phase-seg1 = <15>;
+		phase-seg2 = <4>;
+		sjw = <4>;
+		prop-seg-data = <0>;
+		phase-seg1-data = <7>;
+		phase-seg2-data = <2>;
+		sjw-data = <2>;
+	};
+};
+
+/ {
+	chosen {
+		zephyr,canbus = &mcp2518fd;
+	};
+};
