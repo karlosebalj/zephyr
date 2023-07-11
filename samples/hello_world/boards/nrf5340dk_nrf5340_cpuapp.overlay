@@ -1,0 +1,209 @@
+/*
+ * Copyright (c) 2021 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
+
+// &spi4 {
+// 	compatible = "nordic,nrf-spim";
+// 	status = "okay";
+//     cs-gpios = <&gpio1 12 GPIO_ACTIVE_LOW>; /* D10 */
+
+//     // can0: mcp25xxfd@0 {
+//     //     // compatible = "microchip,mcp25xxfd";
+//     //     spi-max-frequency = <16000000>;
+//     //     // int-gpios = <&gpio0 5 GPIO_ACTIVE_LOW>;
+//     //     int-gpios = <&gpio1 4 GPIO_ACTIVE_LOW>; /* D2 */
+//     //     status = "okay";
+//     //     label = "CAN_0";
+//     //     reg = <0>;
+//     //     osc-freq = <40000000>;
+//     //     sof-on-clko;
+//     //     bus-speed = <1000000>;
+//     //     bus-speed-data = <8000000>;
+//     //     sjw = <5>;
+//     //     prop-seg = <18>;
+//     //     phase-seg1 = <10>;
+//     //     phase-seg2 = <11>;
+//     //     sjw-data = <1>;
+//     //     prop-seg-data = <0>;
+//     //     phase-seg1-data = <3>;
+//     //     phase-seg2-data = <1>;
+
+//     //     #address-cells = <1>;
+//     //     #size-cells = <0>;
+//     // };
+
+//     // can0: mcp2518fd@0 {
+//     //     compatible = "microchip,mcp25xxfd";
+//     //     spi-max-frequency = <16000000>;
+//     //     int-gpios = <&gpio1 4 GPIO_ACTIVE_LOW>; /* D2 */
+//     //     status = "okay";
+//     //     label = "CAN_0";
+//     //     reg = <0>;
+//     //     osc-freq = <40000000>;
+//     //     sof-on-clko;
+//     //     bus-speed = <1000000>;
+//     //     bus-speed-data = <8000000>;
+//     //     sjw = <5>;
+//     //     prop-seg = <18>;
+//     //     phase-seg1 = <10>;
+//     //     phase-seg2 = <11>;
+//     //     sjw-data = <1>;
+//     //     prop-seg-data = <0>;
+//     //     phase-seg1-data = <3>;
+//     //     phase-seg2-data = <1>;
+
+//     //     #address-cells = <1>;
+//     //     #size-cells = <0>;
+//     // };
+// };
+
+// / {
+//     chosen {
+//         // zephyr,can-primary = &can0;
+//         zephyr,canbus = &mcp2518;
+//         zephyr,spi4 = &spi4;
+//         zephyr,shell-uart = &uart0;
+//         zephyr,console = &uart0;
+//     };
+// };
+
+// spi_can: &spi4 {
+//     compatible = "nordic,nrf-spim";
+// };
+
+// &spi_can {
+//     status = "okay";
+//     // cs-gpios = <&gpio1 12 GPIO_ACTIVE_LOW>; /* D10 */
+//     cs-gpios = <&arduino_header 16 GPIO_ACTIVE_LOW>; /* D10 */
+
+//     mcp2518: can@0 {
+//         compatible = "microchip,mcp25xxfd";
+//         spi-max-frequency = <16000000>;
+//         int-gpios = <&gpio1 4 GPIO_ACTIVE_LOW>; /* D2 */
+//         status = "okay";
+//         label = "CAN_0";
+//         reg = <0>;
+//         osc-freq = <40000000>;
+//         sof-on-clko;
+//         bus-speed = <1000000>;
+//         bus-speed-data = <8000000>;
+//         sjw = <5>;
+//         prop-seg = <18>;
+//         phase-seg1 = <10>;
+//         phase-seg2 = <11>;
+//         sjw-data = <1>;
+//         prop-seg-data = <0>;
+//         phase-seg1-data = <3>;
+//         phase-seg2-data = <1>;
+
+//         #address-cells = <1>;
+//         #size-cells = <0>;
+//     };
+// };
+
+// &mikrobus_spi {
+// 	cs-gpios = <&mikrobus_header 2 GPIO_ACTIVE_LOW>;
+// 	mcp2518fd: canfd@0 {
+// 		compatible = "microchip,mcp25xxfd";
+// 		status = "okay";
+
+// 		spi-max-frequency = <18000000>;
+// 		int-gpios = <&mikrobus_header 7 GPIO_ACTIVE_LOW>;
+// 		reg = <0x0>;
+// 		osc-freq = <40000000>;
+// 		bus-speed = <500000>;
+// 		bus-speed-data = <2000000>;
+// 		prop-seg = <0>;
+// 		phase-seg1 = <15>;
+// 		phase-seg2 = <4>;
+// 		sjw = <4>;
+// 		prop-seg-data = <0>;
+// 		phase-seg1-data = <7>;
+// 		phase-seg2-data = <2>;
+// 		sjw-data = <2>;
+// 	};
+// };
+
+/ {
+	chosen {
+		zephyr,canbus = &mcp2518fd;
+	};
+};
+
+/ {
+	mikrobus_header_1: mikrobus-connector-1 {
+		compatible = "mikro-bus";
+		#gpio-cells = <2>;
+		gpio-map-mask = <0xffffffff 0xffffffc0>;
+		gpio-map-pass-thru = <0 0x3f>;
+		gpio-map =	<0 0 &arduino_header 0 0>,	/* AN   -> A0  */
+				<1 0 &arduino_header 3 0>,	/* RST  -> A3  */
+				<2 0 &arduino_header 16 0>,	/* CS   -> D10 */
+				<3 0 &arduino_header 19 0>,	/* SCK  -> D13 */
+				<4 0 &arduino_header 18 0>,	/* MISO -> D12 */
+				<5 0 &arduino_header 17 0>,	/* MOSI -> D11 */
+								/* +3.3V */
+								/* GND */
+				<6 0 &arduino_header 12 0>,	/* PWM  -> D6  */
+				<7 0 &arduino_header 8 0>,	/* INT  -> D2  */
+				<8 0 &arduino_header 6 0>,	/* RX   -> D0  */
+				<9 0 &arduino_header 7 0>,	/* TX   -> D1  */
+				<10 0 &arduino_header 5 0>,	/* SCL  -> A5  */
+				<11 0 &arduino_header 4 0>;	/* SDA  -> A4  */
+								/* +5V */
+								/* GND */
+	};
+
+	mikrobus_header_2: mikrobus-connector-2 {
+		compatible = "mikro-bus";
+		#gpio-cells = <2>;
+		gpio-map-mask = <0xffffffff 0xffffffc0>;
+		gpio-map-pass-thru = <0 0x3f>;
+		gpio-map =	<0 0 &arduino_header 1 0>,	/* AN   -> A1  */
+				<1 0 &arduino_header 2 0>,	/* RST  -> A2  */
+				<2 0 &arduino_header 15 0>,	/* CS   -> D9 */
+				<3 0 &arduino_header 19 0>,	/* SCK  -> D13 */
+				<4 0 &arduino_header 18 0>,	/* MISO -> D12 */
+				<5 0 &arduino_header 17 0>,	/* MOSI -> D11 */
+								/* +3.3V */
+								/* GND */
+				<6 0 &arduino_header 11 0>,	/* PWM  -> D5  */
+				<7 0 &arduino_header 9 0>,	/* INT  -> D3  */
+				<8 0 &arduino_header 6 0>,	/* RX   -> D0  */
+				<9 0 &arduino_header 7 0>,	/* TX   -> D1  */
+				<10 0 &arduino_header 5 0>,	/* SCL  -> A5  */
+				<11 0 &arduino_header 4 0>;	/* SDA  -> A4  */
+								/* +5V */
+								/* GND */
+	};
+};
+
+mikrobus_spi: &arduino_spi {};
+mikrobus_serial: &arduino_serial {};
+mikrobus_i2c: &arduino_i2c {};
+
+&mikrobus_spi {
+	compatible = "nordic,nrf-spim";
+	cs-gpios = <&mikrobus_header 2 GPIO_ACTIVE_LOW>;
+	mcp2518fd: canfd@0 {
+		compatible = "microchip,mcp25xxfd";
+		status = "okay";
+
+		spi-max-frequency = <18000000>;
+		int-gpios = <&mikrobus_header 7 GPIO_ACTIVE_LOW>;
+		reg = <0x0>;
+		osc-freq = <40000000>;
+		bus-speed = <500000>;
+		bus-speed-data = <2000000>;
+		prop-seg = <0>;
+		phase-seg1 = <15>;
+		phase-seg2 = <4>;
+		sjw = <4>;
+		prop-seg-data = <0>;
+		phase-seg1-data = <7>;
+		phase-seg2-data = <2>;
+		sjw-data = <2>;
+	};
+};
