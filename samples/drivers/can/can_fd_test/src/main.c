@@ -28,6 +28,35 @@ K_THREAD_STACK_DEFINE(poll_state_stack, STATE_POLL_THREAD_STACK_SIZE);
 
 const struct device *const can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
 
+void tx_callback(const struct device *dev, int error, void *user_data)
+{
+	char *sender = (char *)user_data;
+
+	if (error != 0) {
+		printf("Sending failed [%d]\nSender: %s\n", error, sender);
+	}
+}
+
+int send_function(const struct device *can_dev)
+{
+	struct can_frame frame = {
+			.flags = CAN_FRAME_IDE,
+			.id = 0x1234567,
+			.dlc = 8
+	};
+
+	frame.data[0] = 1;
+	frame.data[1] = 2;
+	frame.data[2] = 3;
+	frame.data[3] = 4;
+	frame.data[4] = 5;
+	frame.data[5] = 6;
+	frame.data[6] = 7;
+	frame.data[7] = 8;
+
+	return can_send(can_dev, &frame, K_FOREVER, tx_callback, "Sender 1");
+}
+
 int main(void)
 {
 
@@ -41,6 +70,7 @@ int main(void)
 		.id = COUNTER_MSG_ID,
 		.dlc = 2
 	};
+
 	uint8_t toggle = 1;
 	uint16_t counter = 0;
 
@@ -71,6 +101,10 @@ int main(void)
 		counter++;
 		/* This sending call is blocking until the message is sent. */
 		can_send(can_dev, &counter_frame, K_MSEC(100), NULL, NULL);
+
+		k_sleep(SLEEP_TIME);
+		send_function(can_dev);
+
 		k_sleep(SLEEP_TIME);
 	}
 }
