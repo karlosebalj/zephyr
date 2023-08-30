@@ -9,67 +9,84 @@
 #define ZEPHYR_DRIVERS_CAN_MICROCHIP_MCP25XXFD_H_
 
 #include <stdint.h>
+
 #include <zephyr/drivers/can.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/spi.h>
 
-#define MCP25XXFD_RAM_SIZE     2048
-#define MCP25XXFD_PAYLOAD_SIZE CAN_MAX_DLEN
+#define MCP25XXFD_RAM_START_ADDR 0x400
+#define MCP25XXFD_RAM_SIZE       2048
+#define MCP25XXFD_RAM_ALIGNMENT  4
+#define MCP25XXFD_PAYLOAD_SIZE   CAN_MAX_DLEN
 
-#define MCP25XXFD_TX_FIFO_ITEM_SIZE (8 + MCP25XXFD_PAYLOAD_SIZE)
+#define MCP25XXFD_FIFO_TYPE_TEF 0
+#define MCP25XXFD_FIFO_TYPE_RX  1
+
+#define MCP25XXFD_TEF_FIFO_ITEM_SIZE 8
+#define MCP25XXFD_TX_QUEUE_ITEM_SIZE (8 + MCP25XXFD_PAYLOAD_SIZE)
 #if defined(CONFIG_CAN_RX_TIMESTAMP)
-#define MCP25XXFD_RX_FIFO_ITEM_SIZE (4 + 8 + MCP25XXFD_PAYLOAD_SIZE)
-#define MCP25XXFD_TEF_FIFO_ITEM_SIZE     (4 + 8)
+#define MCP25XXFD_RX_FIFO_ITEM_SIZE  (4 + 8 + MCP25XXFD_PAYLOAD_SIZE)
 #else
-#define MCP25XXFD_RX_FIFO_ITEM_SIZE (8 + MCP25XXFD_PAYLOAD_SIZE)
-#define MCP25XXFD_TEF_FIFO_ITEM_SIZE   (8)
+#define MCP25XXFD_RX_FIFO_ITEM_SIZE  (8 + MCP25XXFD_PAYLOAD_SIZE)
 #endif
 
 #define MCP25XXFD_TEF_FIFO_START_ADDR 0
 #define MCP25XXFD_TEF_FIFO_ITEMS      CONFIG_CAN_MCP25XXFD_MAX_TX_QUEUE
 #define MCP25XXFD_TEF_FIFO_SIZE       (MCP25XXFD_TEF_FIFO_ITEMS * MCP25XXFD_TEF_FIFO_ITEM_SIZE)
 
-#define MCP25XXFD_TX_FIFO_START_ADDR MCP25XXFD_TEF_FIFO_SIZE
-#define MCP25XXFD_TX_FIFO_ITEMS      CONFIG_CAN_MCP25XXFD_MAX_TX_QUEUE
-#define MCP25XXFD_TX_FIFO_SIZE       (MCP25XXFD_TX_FIFO_ITEMS * MCP25XXFD_TX_FIFO_ITEM_SIZE)
+#define MCP25XXFD_TX_QUEUE_START_ADDR MCP25XXFD_TEF_FIFO_SIZE
+#define MCP25XXFD_TX_QUEUE_ITEMS      CONFIG_CAN_MCP25XXFD_MAX_TX_QUEUE
+#define MCP25XXFD_TX_QUEUE_SIZE       (MCP25XXFD_TX_QUEUE_ITEMS * MCP25XXFD_TX_QUEUE_ITEM_SIZE)
 
-#define MCP25XXFD_RX_FIFO_START_ADDR (MCP25XXFD_TX_FIFO_START_ADDR + MCP25XXFD_TX_FIFO_SIZE)
+#define MCP25XXFD_RX_FIFO_START_ADDR (MCP25XXFD_TX_QUEUE_START_ADDR + MCP25XXFD_TX_QUEUE_SIZE)
 #define MCP25XXFD_RX_FIFO_SIZE_MAX   (MCP25XXFD_RAM_SIZE - MCP25XXFD_RX_FIFO_START_ADDR)
 #define MCP25XXFD_RX_FIFO_ITEMS_MAX  (MCP25XXFD_RX_FIFO_SIZE_MAX / MCP25XXFD_RX_FIFO_ITEM_SIZE)
 
-#define MCP25XXFD_RX_FIFO_ITEMS MIN(MCP25XXFD_RX_FIFO_ITEMS_MAX, 32)
+#define MCP25XXFD_RX_FIFO_ITEMS CONFIG_CAN_MCP25XXFD_RX_FIFO_ITEMS
 #define MCP25XXFD_RX_FIFO_SIZE  (MCP25XXFD_RX_FIFO_ITEMS * MCP25XXFD_RX_FIFO_ITEM_SIZE)
 
-#define MCP25XXFD_RX_FIFO_IDX CONFIG_CAN_MCP25XXFD_MAX_TX_QUEUE
-#define MCP25XXFD_REG_SIZE 4
+#define MCP25XXFD_RX_FIFO_IDX 1
+#define MCP25XXFD_REG_SIZE    4
 
-BUILD_ASSERT(MCP25XXFD_RX_FIFO_ITEMS >= 1, "Cannot fit RX FIFO into RAM");
+#define MCP25XXFD_CRC_POLY 0x8005
+#define MCP25XXFD_CRC_SEED 0xffff
+
+BUILD_ASSERT(MCP25XXFD_TEF_FIFO_SIZE + MCP25XXFD_TX_QUEUE_SIZE +
+	     MCP25XXFD_RX_FIFO_SIZE <= MCP25XXFD_RAM_SIZE,
+	     "Cannot fit FIFOs into RAM");
 
 struct mcp25xxfd_mailbox {
 	can_tx_callback_t cb;
 	void *cb_arg;
 };
 
+#define MCP25XXFD_SPI_CMD_LEN       2
+#define MCP25XXFD_SPI_LEN_FIELD_LEN 1
+#define MCP25XXFD_SPI_CRC_LEN       2
+
 /* MCP25XXFD Opcodes */
-#define MCP25XXFD_SPI_INSTRUCTION_RESET 0x0000
-#define MCP25XXFD_SPI_INSTRUCTION_WRITE 0x2000
-#define MCP25XXFD_SPI_INSTRUCTION_READ 0x3000
+#define MCP25XXFD_SPI_INSTRUCTION_RESET    0x0000
+#define MCP25XXFD_SPI_INSTRUCTION_WRITE    0x2000
+#define MCP25XXFD_SPI_INSTRUCTION_READ     0x3000
+#define MCP25XXFD_SPI_INSTRUCTION_READ_CRC 0xb000
 
 /* MCP25XXFD Operation Modes */
-#define MCP25XXFD_OPMODE_NORMAL_CANFD 0b000
-#define MCP25XXFD_OPMODE_SLEEP 0b001
-#define MCP25XXFD_OPMODE_INT_LOOPBACK 0b010
-#define MCP25XXFD_OPMODE_LISTEN_ONLY 0b011
+#define MCP25XXFD_OPMODE_NORMAL_CANFD  0b000
+#define MCP25XXFD_OPMODE_SLEEP         0b001
+#define MCP25XXFD_OPMODE_INT_LOOPBACK  0b010
+#define MCP25XXFD_OPMODE_LISTEN_ONLY   0b011
 #define MCP25XXFD_OPMODE_CONFIGURATION 0b100
-#define MCP25XXFD_OPMODE_EXT_LOOPBACK 0b101
-#define MCP25XXFD_OPMODE_NORMAL_CAN2 0b110
-#define MCP25XXFD_OPMODE_RESTRICTED 0b110
+#define MCP25XXFD_OPMODE_EXT_LOOPBACK  0b101
+#define MCP25XXFD_OPMODE_NORMAL_CAN2   0b110
+#define MCP25XXFD_OPMODE_RESTRICTED    0b110
 
 #define MCP25XXFD_WFT_T00FILTER 0b00
 #define MCP25XXFD_WFT_T01FILTER 0b01
 #define MCP25XXFD_WFT_T10FILTER 0b10
 #define MCP25XXFD_WFT_T11FILTER 0b11
 
-#define MCP25XXFD_TDCMOD_AUTO 0b10
-#define MCP25XXFD_TDCMOD_MANUAL 0b01
+#define MCP25XXFD_TDCMOD_AUTO     0b10
+#define MCP25XXFD_TDCMOD_MANUAL   0b01
 #define MCP25XXFD_TDCMOD_DISABLED 0b00
 
 #define MCP25XXFD_TIMING_MIN_INITIALIZER				\
@@ -78,7 +95,7 @@ struct mcp25xxfd_mailbox {
 		.prop_seg = 0,						\
 		.phase_seg1 = 2,					\
 		.phase_seg2 = 1,					\
-		.prescaler = 1						\
+		.prescaler = 1,						\
 	}
 
 #define MCP25XXFD_TIMING_MAX_INITIALIZER				\
@@ -87,7 +104,7 @@ struct mcp25xxfd_mailbox {
 		.prop_seg = 0,						\
 		.phase_seg1 = 256,					\
 		.phase_seg2 = 128,					\
-		.prescaler = 256					\
+		.prescaler = 256,					\
 	}
 
 #define MCP25XXFD_TIMING_DATA_MIN_INITIALIZER				\
@@ -96,7 +113,7 @@ struct mcp25xxfd_mailbox {
 		.prop_seg = 0,						\
 		.phase_seg1 = 1,					\
 		.phase_seg2 = 1,					\
-		.prescaler = 1						\
+		.prescaler = 1,						\
 	}
 
 #define MCP25XXFD_TIMING_DATA_MAX_INITIALIZER				\
@@ -105,13 +122,14 @@ struct mcp25xxfd_mailbox {
 		.prop_seg = 0,						\
 		.phase_seg1 = 32,					\
 		.phase_seg2 = 16,					\
-		.prescaler = 256					\
+		.prescaler = 256,					\
 	}
 
 /* MCP25XXFD Registers */
 
-#define MCP25XXFD_REG_CON 0x000
-
+#define MCP25XXFD_REG_CON    0x000
+#define MCP25XXFD_REG_CON_B2 0x002
+#define MCP25XXFD_REG_CON_B3 0x003
 struct mcp25xxfd_con_b0 {
 	uint32_t DNCNT : 5;     /* Device Net Filter Bit Number */
 	uint32_t ISOCRCEN : 1;  /* Enable ISO CRC in CAN FD Frames */
@@ -172,7 +190,9 @@ struct mcp25xxfd_dbtcfg {
 	uint32_t BRP : 8;       /* Baud Rate Prescaler */
 } __packed;
 
-#define MCP25XXFD_REG_TDC 0x00C
+#define MCP25XXFD_REG_TDC  0x00C
+#define MCP25XXFD_TDCO_MIN -64
+#define MCP25XXFD_TDCO_MAX 63
 struct mcp25xxfd_tdc {
 	uint32_t TDCV : 6;      /* Transmitter Delay Compensation Value */
 	uint32_t res0 : 2;
@@ -274,6 +294,7 @@ struct mcp25xxfd_bdiag1 {
 #define MCP25XXFD_REG_TEFCON 0x040
 #define MCP25XXFD_REG_TXQCON 0x050
 #define MCP25XXFD_REG_FIFOCON(m) (MCP25XXFD_REG_TXQCON + (m) * 0xC)
+#define MCP25XXFD_REG_FIFOCON_TO_STA(addr) (addr + 4)
 
 struct mcp25xxfd_fifocon_b0 {
 	uint32_t FNEIE : 1;     /* FIFO Not Full/Not Empty Interrupt Enable */
@@ -293,6 +314,9 @@ struct mcp25xxfd_fifocon_b1 {
 	uint32_t res0 : 5;
 } __packed;
 
+#define MCP25XXFD_TXAT_DISABLE_RETRANSMIT   0x0
+#define MCP25XXFD_TXAT_THREE_RETRANSMIT     0x1
+#define MCP25XXFD_TXAT_UNLIMITED_RETRANSMIT 0x3
 struct mcp25xxfd_fifocon_b2 {
 	uint32_t TXPRI : 5;     /* Transmit Priority */
 	uint32_t TXAT : 2;      /* Retransmission Attempts */
@@ -359,7 +383,7 @@ struct mcp25xxfd_fltcon {
 	uint32_t FLTEN : 1;
 } __packed;
 
-#define MCP25XXFD_REG_FLTOBJ(m) (0x1F0 + ((m) * 8))
+#define MCP25XXFD_REG_FLTOBJ(m) (0x1F0 + ((m) * 0x8))
 struct mcp25xxfd_fltobj {
 	uint32_t SID : 11;
 	uint32_t EID : 18;
@@ -368,7 +392,7 @@ struct mcp25xxfd_fltobj {
 	uint32_t res0 : 1;
 } __packed;
 
-#define MCP25XXFD_REG_MASK(m) (0x1F4 + ((m) * 8))
+#define MCP25XXFD_REG_MASK(m) (0x1F4 + ((m) * 0x8))
 struct mcp25xxfd_mask {
 	uint32_t MSID : 11;
 	uint32_t MEID : 18;
@@ -426,7 +450,7 @@ struct mcp25xxfd_iocon {
 } __packed;
 
 /* MCP25XXFD Objects */
-
+#define MCP25XXFD_TXQ_OBJ_HEADER_SIZE 8
 struct mcp25xxfd_txobj {
 	uint32_t SID : 11;
 	uint32_t EID : 18;
@@ -476,13 +500,20 @@ struct mcp25xxfd_tefobj {
 	uint32_t SEQ : 23;
 } __packed;
 
-#define BUF_SIZE                                                                                   \
+#define MCP25XXFD_MAX_READ_FIFO_BUF_SIZE                                                           \
 	MAX((MCP25XXFD_RX_FIFO_ITEM_SIZE * MCP25XXFD_RX_FIFO_ITEMS),                               \
 	    (MCP25XXFD_TEF_FIFO_ITEM_SIZE * MCP25XXFD_TEF_FIFO_ITEMS))
 
+#define MCP25XXFD_MAX_READ_CRC_BUF_SIZE                                                            \
+	MCP25XXFD_SPI_CRC_LEN + sizeof(struct mcp25xxfd_fiforegs)
+
+#define MCP25XXFD_SPI_BUF_SIZE                                                                     \
+	MAX(MCP25XXFD_MAX_READ_FIFO_BUF_SIZE, MCP25XXFD_MAX_READ_CRC_BUF_SIZE)
+#define MCP25XXFD_SPI_HEADER_LEN (MCP25XXFD_SPI_CMD_LEN + MCP25XXFD_SPI_LEN_FIELD_LEN)
+
 struct mcp25xxfd_spi_data {
-	uint16_t spi_cmd;
-	uint8_t buf[BUF_SIZE];
+	uint8_t header[MCP25XXFD_SPI_HEADER_LEN]; /* contains spi_cmd and length field (if used) */
+	uint8_t buf[MCP25XXFD_SPI_BUF_SIZE];
 } __packed;
 
 struct mcp25xxfd_fifo {
@@ -523,7 +554,11 @@ struct mcp25xxfd_data {
 	uint8_t sjw_data;
 
 	bool started;
-	uint8_t mcp25xxfd_mode;
+	uint8_t next_mcp25xxfd_mode;
+	uint8_t current_mcp25xxfd_mode;
+	int tdco;
+
+	can_mode_t mode;
 
 	struct mcp25xxfd_spi_data spi_data;
 
