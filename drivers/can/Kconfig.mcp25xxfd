@@ -8,9 +8,8 @@ config CAN_MCP25XXFD
 	bool "MCP25XXFD CAN Driver"
 	default y
 	depends on DT_HAS_MICROCHIP_MCP25XXFD_ENABLED
+	select CRC
 	select SPI
-	select CAN_AUTO_BUS_OFF_RECOVERY
-	select CLOCK_CONTROL
 	help
 	  Enable MCP25XXFD CAN Driver
 
@@ -24,11 +23,18 @@ config CAN_MCP25XXFD_MODE_CHANGE_TIMEOUT_MSEC
 
 config CAN_MCP25XXFD_MAX_TX_QUEUE
 	int "Maximum number of queued messages"
-	default 4
-	range 1 31
+	default 8
+	range 1 32
 	help
 	  Defines the array size of transmit callback pointers and semaphores,
-	  as well as the number of TX FIFOs allocated on the MCP25XXFD.
+	  as well as the number of messages in the TX queue.
+
+config CAN_MCP25XXFD_RX_FIFO_ITEMS
+	int "Number of CAN messages in the RX fifo"
+	default 16
+	range 1 32
+	help
+	  Defines the number of CAN messages in the RX fifo.
 
 config CAN_MCP25XXFD_INT_THREAD_STACK_SIZE
 	int "Stack size for interrupt handler"
@@ -44,6 +50,20 @@ config CAN_MCP25XXFD_INT_THREAD_PRIO
 	  Thread priority of the interrupt handler. A higher number implies a
 	  higher priority. The thread is cooperative and will not be interrupted by
 	  another thread until execution is released.
+
+config CAN_MCP25XXFD_RX_TIMESTAMP_PRESCALER
+	int "Timestamp counter prescaler"
+	default 1
+	range 1 1024
+	depends on CAN_RX_TIMESTAMP
+	help
+	  The timestamp counter is derived from the internal clock divided by this value.
+
+config CAN_MCP25XXFD_READ_CRC_RETRIES
+	int "Number of retries during SFR register read"
+	default 5
+	help
+	  Number of retries during SFR register read if CRC fails.
 
 config CAN_MAX_FILTER
 	int "Maximum number of concurrent active filters"
