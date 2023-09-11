@@ -63,20 +63,20 @@
 	  };
 	};
   
-	// spi4_default: spi4_default {
-	//   group1 {
-	//     psels = <NRF_PSEL(SPIM_SCK, 0, 8)>,
-	//     <NRF_PSEL(SPIM_MOSI, 0, 9)>;
-	//   };
-	// };
+	spi4_default: spi4_default {
+	  group1 {
+	    psels = <NRF_PSEL(SPIM_SCK, 0, 8)>,
+	    <NRF_PSEL(SPIM_MOSI, 0, 9)>;
+	  };
+	};
   
-	// spi4_sleep: spi4_sleep {
-	//   group1 {
-	//     psels = <NRF_PSEL(SPIM_SCK, 0, 8)>,
-	//     <NRF_PSEL(SPIM_MOSI, 0, 9)>;
-	//     low-power-enable;
-	//   };
-	// };
+	spi4_sleep: spi4_sleep {
+	  group1 {
+	    psels = <NRF_PSEL(SPIM_SCK, 0, 8)>,
+	    <NRF_PSEL(SPIM_MOSI, 0, 9)>;
+	    low-power-enable;
+	  };
+	};
   
   
 	pwm0_default: pwm0_default {
@@ -170,24 +170,24 @@
   
   // TODO: check dc, cs and reset gpios once PCB is manufactured,
   // it may be a bit different
-  // &spi4  {
-  //     status = "okay";
-  //     compatible = "nordic,nrf-spim";
-  //     pinctrl-0 = <&spi4_default>;
-  //     pinctrl-1 = <&spi4_sleep>;
-  //     pinctrl-names = "default", "sleep";
-  //     cs-gpios = <&gpio0 6 GPIO_ACTIVE_LOW>;
+  &spi4  {
+      status = "okay";
+      compatible = "nordic,nrf-spim";
+      pinctrl-0 = <&spi4_default>;
+      pinctrl-1 = <&spi4_sleep>;
+      pinctrl-names = "default", "sleep";
+      cs-gpios = <&gpio0 6 GPIO_ACTIVE_LOW>;
   
-  //     spd2010: spd2010@0 {
-  //         compatible = "solomon,spd2010";
-  //         status = "okay";
-  //         spi-max-frequency = <40000000>;
-  //         reg = <0>;
-  //         width = <180>;
-  //         height = <454>;
-  //         label = "solomon_spd2010";
-  //         dc-gpios = <&gpio0 12 GPIO_ACTIVE_HIGH>;
-  //         reset-gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>;
-  //     };
-  // };
+      spd2010: spd2010@0 {
+          compatible = "solomon,spd2010";
+          status = "okay";
+          spi-max-frequency = <40000000>;
+          reg = <0>;
+          width = <180>;
+          height = <454>;
+          label = "solomon_spd2010";
+          dc-gpios = <&gpio0 12 GPIO_ACTIVE_HIGH>;
+          reset-gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>;
+      };
+  };
   
