@@ -2,7 +2,7 @@
 	chosen {
 	  zephyr,console = &uart0;
 	  // zephyr,display = &spd2010;
-	  zephyr,canbus = &mcp2518fd;
+	  zephyr,canbus = &mcp2518fd_mikroe_mcp2518fd_click;
 	};
   
 	aliases {
@@ -140,25 +140,50 @@
   
 	// compatible = "nordic,nrf-spim";
 	  cs-gpios = <&gpio1 9 GPIO_ACTIVE_LOW>;
-	  mcp2518fd: canfd@0 {
-		  compatible = "microchip,mcp25xxfd";
-		  status = "okay";
+	  
+
+	
+	mcp2518fd_mikroe_mcp2518fd_click: mcp2518fd@0 {
+		compatible = "microchip,mcp251xfd";
+		status = "okay";
+
+		spi-max-frequency = <18000000>;
+		int-gpios = <&gpio1 04 GPIO_ACTIVE_LOW>;
+		reg = <0x0>;
+		osc-freq = <40000000>;
+
+		bus-speed = <125000>;
+		sample-point = <875>;
+		bus-speed-data = <1000000>;
+		sample-point-data = <875>;
+
+		sjw = <4>;
+		prop-seg = <0>;
+		phase-seg1 = <15>;
+		phase-seg2 = <4>;
+		prop-seg-data = <0>;
+		phase-seg1-data = <7>;
+		phase-seg2-data = <2>;
+		sjw-data = <2>;
+	};
+	//   mcp2518fd: canfd@0 {
+	// 	  compatible = "microchip,mcp251xfd";
+	// 	  status = "okay";
   
-		  spi-max-frequency = <1000000>;
-		  int-gpios = <&gpio1 04 GPIO_ACTIVE_LOW>;
-		  reg = <0x0>;
-		  osc-freq = <40000000>;
-		  bus-speed = <500000>;
-		  bus-speed-data = <2000000>;
-		  prop-seg = <0>;
-		  phase-seg1 = <15>;
-		  phase-seg2 = <4>;
-		  sjw = <4>;
-		  prop-seg-data = <0>;
-		  phase-seg1-data = <7>;
-		  phase-seg2-data = <2>;
-		  sjw-data = <2>;
-	  };
+	// 	  spi-max-frequency = <1000000>;
+	// 	  reg = <0x0>;
+	// 	  osc-freq = <40000000>;
+	// 	  bus-speed = <500000>;
+	// 	  bus-speed-data = <2000000>;
+	// 	  prop-seg = <0>;
+	// 	  phase-seg1 = <15>;
+	// 	  phase-seg2 = <4>;
+	// 	  sjw = <4>;
+	// 	  prop-seg-data = <0>;
+	// 	  phase-seg1-data = <7>;
+	// 	  phase-seg2-data = <2>;
+	// 	  sjw-data = <2>;
+	//   };
   };
   
   &pwm0 {
