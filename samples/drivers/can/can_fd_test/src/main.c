@@ -70,9 +70,9 @@ void rx_thread(void *arg1, void *arg2, void *arg3)
 	ARG_UNUSED(arg2);
 	ARG_UNUSED(arg3);
 	const struct can_filter filter = {
-		.flags = CAN_FILTER_DATA | CAN_FILTER_IDE,
-		.id = COUNTER_MSG_ID,
-		.mask = CAN_EXT_ID_MASK
+		.flags = 0,
+		.id = 0,
+		.mask = 0
 	};
 	struct can_frame frame;
 	int filter_id;
