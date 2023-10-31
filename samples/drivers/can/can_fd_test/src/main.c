@@ -46,7 +46,7 @@ void tx_callback(const struct device *dev, int error, void *user_data)
 int send_function(const struct device *can_dev)
 {
 	struct can_frame frame = {
-			.flags = CAN_FRAME_IDE,
+			.flags = 0,
 			.id = 0x1234567,
 			.dlc = 8
 	};
@@ -129,7 +129,7 @@ int main(void)
 		return 0;
 	}
 
-	can_set_bitrate(can_dev, 500000);
+	can_set_bitrate(can_dev, 250000);
 
 	ret = can_start(can_dev);
 	if (ret != 0) {
@@ -138,7 +138,7 @@ int main(void)
 	}
 
 	struct can_frame frame = {
-        .flags = CAN_FRAME_FDF,
+        .flags = 0,
         .id = COUNTER_MSG_ID,
         .dlc = 8,
         .data = {1,2,3,4,5,6,7,8}
