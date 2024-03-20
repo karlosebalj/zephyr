@@ -6,11 +6,14 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
+#include <zephyr/logging/log.h>
 
-// #include <zephyr/device.h>
+LOG_MODULE_REGISTER(MAIN_DISPLAY_TEST, LOG_LEVEL_INF);
+
 
 int main(void)
 {
-	printk("Hello World! %s\n", CONFIG_BOARD);
+	LOG_INF("Hello World!");
+
 	return 0;
 }
